@@ -1,10 +1,13 @@
 import { apiClient } from '../utils/ApiClient';
 import { IExpenseReportRow, IExpenseReportFilter } from '../models/IExpenseReport';
+import { IPagedResult } from '../models/IPagedResult';
 
-function toQueryString(filter: IExpenseReportFilter): string {
+function toQueryString(filter: IExpenseReportFilter, page: number, pageSize: number): string {
   const parts: string[] = [
     `fromDate=${encodeURIComponent(filter.fromDate)}`,
-    `toDate=${encodeURIComponent(filter.toDate)}`
+    `toDate=${encodeURIComponent(filter.toDate)}`,
+    `page=${page}`,
+    `pageSize=${pageSize}`
   ];
   if (filter.departmentId !== undefined) {
     parts.push(`departmentId=${encodeURIComponent(String(filter.departmentId))}`);
@@ -16,6 +19,10 @@ function toQueryString(filter: IExpenseReportFilter): string {
 }
 
 export const reportService = {
-  getExpenseReport: (filter: IExpenseReportFilter): Promise<IExpenseReportRow[]> =>
-    apiClient.get<IExpenseReportRow[]>(`reports/expenses${toQueryString(filter)}`)
+  getExpenseReportPage: (
+    filter: IExpenseReportFilter,
+    page: number,
+    pageSize: number
+  ): Promise<IPagedResult<IExpenseReportRow>> =>
+    apiClient.get<IPagedResult<IExpenseReportRow>>(`reports/expenses${toQueryString(filter, page, pageSize)}`)
 };

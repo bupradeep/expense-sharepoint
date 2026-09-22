@@ -3,7 +3,8 @@ import * as ReactDom from 'react-dom';
 import { Version } from '@microsoft/sp-core-library';
 import {
   IPropertyPaneConfiguration,
-  PropertyPaneTextField
+  PropertyPaneTextField,
+  PropertyPaneDropdown
 } from '@microsoft/sp-property-pane';
 import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
 
@@ -11,9 +12,11 @@ import * as strings from 'ExpenseWebPartStrings';
 import Expense from './components/Expense';
 import { IExpenseProps } from './components/IExpenseProps';
 import { DEFAULT_API_BASE_URL } from '../../utils/Constants';
+import { PAGE_SIZE_OPTIONS, DEFAULT_PAGE_SIZE } from './components/common/PageSizeContext';
 
 export interface IExpenseWebPartProps {
   apiBaseUrl: string;
+  defaultPageSize: number;
 }
 
 export default class ExpenseWebPart extends BaseClientSideWebPart<IExpenseWebPartProps> {
@@ -23,7 +26,8 @@ export default class ExpenseWebPart extends BaseClientSideWebPart<IExpenseWebPar
       Expense,
       {
         context: this.context,
-        apiBaseUrl: this.properties.apiBaseUrl || DEFAULT_API_BASE_URL
+        apiBaseUrl: this.properties.apiBaseUrl || DEFAULT_API_BASE_URL,
+        defaultPageSize: this.properties.defaultPageSize || DEFAULT_PAGE_SIZE
       }
     );
 
@@ -51,6 +55,11 @@ export default class ExpenseWebPart extends BaseClientSideWebPart<IExpenseWebPar
               groupFields: [
                 PropertyPaneTextField('apiBaseUrl', {
                   label: strings.ApiBaseUrlFieldLabel
+                }),
+                PropertyPaneDropdown('defaultPageSize', {
+                  label: strings.DefaultPageSizeFieldLabel,
+                  options: PAGE_SIZE_OPTIONS.map((size) => ({ key: size, text: String(size) })),
+                  selectedKey: this.properties.defaultPageSize || DEFAULT_PAGE_SIZE
                 })
               ]
             }

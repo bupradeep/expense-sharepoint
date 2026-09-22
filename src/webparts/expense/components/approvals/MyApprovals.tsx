@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { DetailsList, DetailsListLayoutMode, SelectionMode, IColumn } from '@fluentui/react/lib/DetailsList';
-import { Panel, PanelType } from '@fluentui/react/lib/Panel';
 import { TextField } from '@fluentui/react/lib/TextField';
 import { PrimaryButton, DefaultButton } from '@fluentui/react/lib/Button';
 import { Stack } from '@fluentui/react/lib/Stack';
@@ -12,6 +11,9 @@ import { formatCurrency, formatDate } from '../../../../utils/Formatters';
 import LoadingState from '../common/LoadingState';
 import ErrorMessage from '../common/ErrorMessage';
 import TableCard from '../common/TableCard';
+import FormRow from '../common/FormRow';
+import PaginationControls from '../common/PaginationControls';
+import { usePagination } from '../common/usePagination';
 
 export interface IMyApprovalsProps {
   currentUser: IUser;
@@ -37,21 +39,16 @@ const actionRequests: { [K in ActionType]: typeof approvalService.approve } = {
 };
 
 const MyApprovals: React.FC<IMyApprovalsProps> = (props) => {
-  const [items, setItems] = React.useState<IPendingApproval[] | undefined>(undefined);
-  const [error, setError] = React.useState<string | undefined>(undefined);
   const [pendingAction, setPendingAction] = React.useState<IPendingAction | undefined>(undefined);
   const [comments, setComments] = React.useState<string>('');
   const [saving, setSaving] = React.useState<boolean>(false);
   const [formError, setFormError] = React.useState<string | undefined>(undefined);
 
-  const load = React.useCallback(() => {
-    setError(undefined);
-    approvalService.getPending(props.currentUser.UserId)
-      .then(setItems)
-      .catch((err: ApiError) => setError(err.message));
-  }, [props.currentUser.UserId]);
-
-  React.useEffect(() => { load(); }, [load]);
+  const fetchPage = React.useCallback(
+    (page: number, pageSize: number) => approvalService.getPendingPage(props.currentUser.UserId, page, pageSize),
+    [props.currentUser.UserId]
+  );
+  const pagination = usePagination(fetchPage);
 
   const openAction = (claim: IPendingApproval, action: ActionType): void => {
     setPendingAction({ claim, action });
@@ -85,13 +82,38 @@ const MyApprovals: React.FC<IMyApprovalsProps> = (props) => {
       .then(() => {
         setSaving(false);
         setPendingAction(undefined);
-        load();
+        pagination.reload();
       })
       .catch((err: ApiError) => {
         setSaving(false);
         setFormError(err.message);
       });
   };
+
+  if (pendingAction) {
+    return (
+      <TableCard title={`${actionLabels[pendingAction.action]} ${pendingAction.claim.ClaimNumber}`}>
+        <Stack tokens={{ childrenGap: 12 }}>
+          {formError && <ErrorMessage message={formError} />}
+          <FormRow label="Comments" required={commentsRequired}>
+            <TextField
+              multiline
+              value={comments}
+              onChange={(_e, value) => setComments(value || '')}
+            />
+          </FormRow>
+          <Stack horizontal tokens={{ childrenGap: 8 }}>
+            <PrimaryButton
+              text={actionLabels[pendingAction.action]}
+              onClick={confirmAction}
+              disabled={saving}
+            />
+            <DefaultButton text="Cancel" onClick={() => setPendingAction(undefined)} />
+          </Stack>
+        </Stack>
+      </TableCard>
+    );
+  }
 
   const columns: IColumn[] = [
     { key: 'claimNumber', name: 'Claim #', fieldName: 'ClaimNumber', minWidth: 130, isResizable: true },
@@ -121,43 +143,28 @@ const MyApprovals: React.FC<IMyApprovalsProps> = (props) => {
 
   return (
     <div>
-      {error && <ErrorMessage message={error} />}
+      {pagination.error && <ErrorMessage message={pagination.error} />}
       <TableCard>
-        {!items ? <LoadingState /> : (
-          <DetailsList
-            items={items}
-            columns={columns}
-            layoutMode={DetailsListLayoutMode.justified}
-            selectionMode={SelectionMode.none}
-          />
+        {pagination.loading && pagination.pageItems.length === 0 ? <LoadingState /> : (
+          <>
+            <DetailsList
+              items={pagination.pageItems}
+              columns={columns}
+              layoutMode={DetailsListLayoutMode.justified}
+              selectionMode={SelectionMode.none}
+            />
+            <PaginationControls
+              page={pagination.page}
+              pageSize={pagination.pageSize}
+              totalPages={pagination.totalPages}
+              totalCount={pagination.totalCount}
+              loading={pagination.loading}
+              onPageChange={pagination.setPage}
+              onPageSizeChange={pagination.setPageSize}
+            />
+          </>
         )}
       </TableCard>
-
-      <Panel
-        isOpen={!!pendingAction}
-        onDismiss={() => setPendingAction(undefined)}
-        type={PanelType.smallFixedFar}
-        headerText={pendingAction ? `${actionLabels[pendingAction.action]} ${pendingAction.claim.ClaimNumber}` : ''}
-      >
-        <Stack tokens={{ childrenGap: 12 }}>
-          {formError && <ErrorMessage message={formError} />}
-          <TextField
-            label="Comments"
-            required={commentsRequired}
-            multiline
-            value={comments}
-            onChange={(_e, value) => setComments(value || '')}
-          />
-          <Stack horizontal tokens={{ childrenGap: 8 }}>
-            <PrimaryButton
-              text={pendingAction ? actionLabels[pendingAction.action] : 'Confirm'}
-              onClick={confirmAction}
-              disabled={saving}
-            />
-            <DefaultButton text="Cancel" onClick={() => setPendingAction(undefined)} />
-          </Stack>
-        </Stack>
-      </Panel>
     </div>
   );
 };

@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { DetailsList, DetailsListLayoutMode, SelectionMode, IColumn } from '@fluentui/react/lib/DetailsList';
 import { CommandBar, ICommandBarItemProps } from '@fluentui/react/lib/CommandBar';
-import { Panel, PanelType } from '@fluentui/react/lib/Panel';
 import { TextField } from '@fluentui/react/lib/TextField';
 import { Toggle } from '@fluentui/react/lib/Toggle';
 import { Dropdown, IDropdownOption } from '@fluentui/react/lib/Dropdown';
@@ -18,6 +17,9 @@ import ErrorMessage from '../common/ErrorMessage';
 import ConfirmDialog from '../common/ConfirmDialog';
 import TableCard from '../common/TableCard';
 import RowActions from '../common/RowActions';
+import FormRow from '../common/FormRow';
+import PaginationControls from '../common/PaginationControls';
+import { usePagination } from '../common/usePagination';
 
 const emptyForm: IUserDto = {
   fullName: '',
@@ -31,27 +33,24 @@ const emptyForm: IUserDto = {
 const roleOptions: IDropdownOption[] = Object.keys(UserRoles).map((role) => ({ key: role, text: role }));
 
 const UsersAdmin: React.FC = () => {
-  const [items, setItems] = React.useState<IUser[] | undefined>(undefined);
   const [departments, setDepartments] = React.useState<IDepartment[]>([]);
-  const [error, setError] = React.useState<string | undefined>(undefined);
-  const [panelOpen, setPanelOpen] = React.useState<boolean>(false);
+  const [formOpen, setFormOpen] = React.useState<boolean>(false);
   const [editing, setEditing] = React.useState<IUser | undefined>(undefined);
   const [form, setForm] = React.useState<IUserDto>(emptyForm);
   const [saving, setSaving] = React.useState<boolean>(false);
   const [formError, setFormError] = React.useState<string | undefined>(undefined);
   const [deleteTarget, setDeleteTarget] = React.useState<IUser | undefined>(undefined);
+  const [actionError, setActionError] = React.useState<string | undefined>(undefined);
 
-  const load = React.useCallback(() => {
-    setError(undefined);
-    userService.getAll()
-      .then(setItems)
-      .catch((err: ApiError) => setError(err.message));
-  }, []);
+  const fetchPage = React.useCallback(
+    (page: number, pageSize: number) => userService.getPage(page, pageSize),
+    []
+  );
+  const pagination = usePagination(fetchPage);
 
   React.useEffect(() => {
-    load();
     departmentService.getAll().then(setDepartments).catch(() => { /* department dropdown is best-effort */ });
-  }, [load]);
+  }, []);
 
   const departmentOptions: IDropdownOption[] = departments.map((d) => ({ key: d.DepartmentId, text: d.DepartmentName }));
 
@@ -59,7 +58,7 @@ const UsersAdmin: React.FC = () => {
     setEditing(undefined);
     setForm(emptyForm);
     setFormError(undefined);
-    setPanelOpen(true);
+    setFormOpen(true);
   };
 
   const openEdit = (item: IUser): void => {
@@ -74,7 +73,7 @@ const UsersAdmin: React.FC = () => {
       isActive: item.IsActive
     });
     setFormError(undefined);
-    setPanelOpen(true);
+    setFormOpen(true);
   };
 
   const save = (): void => {
@@ -87,8 +86,8 @@ const UsersAdmin: React.FC = () => {
     request
       .then(() => {
         setSaving(false);
-        setPanelOpen(false);
-        load();
+        setFormOpen(false);
+        pagination.reload();
       })
       .catch((err: ApiError) => {
         setSaving(false);
@@ -103,13 +102,75 @@ const UsersAdmin: React.FC = () => {
     userService.remove(deleteTarget.UserId)
       .then(() => {
         setDeleteTarget(undefined);
-        load();
+        pagination.reload();
       })
       .catch((err: ApiError) => {
         setDeleteTarget(undefined);
-        setError(err.message);
+        setActionError(err.message);
       });
   };
+
+  if (formOpen) {
+    return (
+      <TableCard title={editing ? 'Edit User' : 'New User'}>
+        <Stack tokens={{ childrenGap: 12 }}>
+          {formError && <ErrorMessage message={formError} />}
+          <FormRow label="Full Name" required>
+            <TextField
+              value={form.fullName}
+              onChange={(_e, value) => setForm({ ...form, fullName: value || '' })}
+            />
+          </FormRow>
+          <FormRow label="Email" required>
+            <TextField
+              value={form.email}
+              onChange={(_e, value) => setForm({ ...form, email: value || '' })}
+            />
+          </FormRow>
+          <FormRow label="Employee Code" required>
+            <TextField
+              value={form.employeeCode}
+              onChange={(_e, value) => setForm({ ...form, employeeCode: value || '' })}
+            />
+          </FormRow>
+          <FormRow label="Employee Object Id (Azure AD)" required>
+            <TextField
+              value={form.employeeObjectId}
+              onChange={(_e, value) => setForm({ ...form, employeeObjectId: value || '' })}
+            />
+          </FormRow>
+          <FormRow label="Role">
+            <Dropdown
+              selectedKey={form.role}
+              options={roleOptions}
+              onChange={(_e, option) => setForm({ ...form, role: option?.key as UserRole })}
+            />
+          </FormRow>
+          <FormRow label="Department">
+            <Dropdown
+              selectedKey={form.departmentId}
+              options={departmentOptions}
+              onChange={(_e, option) => setForm({ ...form, departmentId: option?.key as number })}
+            />
+          </FormRow>
+          <FormRow label="Active">
+            <Toggle
+              checked={form.isActive}
+              onChange={(_e, checked) => setForm({ ...form, isActive: !!checked })}
+            />
+          </FormRow>
+          <Stack horizontal tokens={{ childrenGap: 8 }}>
+            <PrimaryButton
+              text="Save"
+              onClick={save}
+              disabled={saving || !form.fullName || !form.email || !form.employeeCode || !form.employeeObjectId}
+            />
+            <DefaultButton text="Cancel" onClick={() => setFormOpen(false)} />
+          </Stack>
+        </Stack>
+      </TableCard>
+    );
+  }
 
   const commandBarItems: ICommandBarItemProps[] = [
     { key: 'new', text: 'New User', iconProps: { iconName: 'Add' }, onClick: openCreate }
@@ -139,77 +200,28 @@ const UsersAdmin: React.FC = () => {
   return (
     <div>
       <CommandBar items={commandBarItems} />
-      {error && <ErrorMessage message={error} />}
+      {(pagination.error || actionError) && <ErrorMessage message={pagination.error || actionError || ''} />}
       <TableCard>
-        {!items ? <LoadingState /> : (
-          <DetailsList
-            items={items}
-            columns={columns}
-            layoutMode={DetailsListLayoutMode.justified}
-            selectionMode={SelectionMode.none}
-          />
+        {pagination.loading && pagination.pageItems.length === 0 ? <LoadingState /> : (
+          <>
+            <DetailsList
+              items={pagination.pageItems}
+              columns={columns}
+              layoutMode={DetailsListLayoutMode.justified}
+              selectionMode={SelectionMode.none}
+            />
+            <PaginationControls
+              page={pagination.page}
+              pageSize={pagination.pageSize}
+              totalPages={pagination.totalPages}
+              totalCount={pagination.totalCount}
+              loading={pagination.loading}
+              onPageChange={pagination.setPage}
+              onPageSizeChange={pagination.setPageSize}
+            />
+          </>
         )}
       </TableCard>
-
-      <Panel
-        isOpen={panelOpen}
-        onDismiss={() => setPanelOpen(false)}
-        type={PanelType.smallFixedFar}
-        headerText={editing ? 'Edit User' : 'New User'}
-      >
-        <Stack tokens={{ childrenGap: 12 }}>
-          {formError && <ErrorMessage message={formError} />}
-          <TextField
-            label="Full Name"
-            required
-            value={form.fullName}
-            onChange={(_e, value) => setForm({ ...form, fullName: value || '' })}
-          />
-          <TextField
-            label="Email"
-            required
-            value={form.email}
-            onChange={(_e, value) => setForm({ ...form, email: value || '' })}
-          />
-          <TextField
-            label="Employee Code"
-            required
-            value={form.employeeCode}
-            onChange={(_e, value) => setForm({ ...form, employeeCode: value || '' })}
-          />
-          <TextField
-            label="Employee Object Id (Azure AD)"
-            required
-            value={form.employeeObjectId}
-            onChange={(_e, value) => setForm({ ...form, employeeObjectId: value || '' })}
-          />
-          <Dropdown
-            label="Role"
-            selectedKey={form.role}
-            options={roleOptions}
-            onChange={(_e, option) => setForm({ ...form, role: option?.key as UserRole })}
-          />
-          <Dropdown
-            label="Department"
-            selectedKey={form.departmentId}
-            options={departmentOptions}
-            onChange={(_e, option) => setForm({ ...form, departmentId: option?.key as number })}
-          />
-          <Toggle
-            label="Active"
-            checked={form.isActive}
-            onChange={(_e, checked) => setForm({ ...form, isActive: !!checked })}
-          />
-          <Stack horizontal tokens={{ childrenGap: 8 }}>
-            <PrimaryButton
-              text="Save"
-              onClick={save}
-              disabled={saving || !form.fullName || !form.email || !form.employeeCode || !form.employeeObjectId}
-            />
-            <DefaultButton text="Cancel" onClick={() => setPanelOpen(false)} />
-          </Stack>
-        </Stack>
-      </Panel>
 
       <ConfirmDialog
         hidden={!deleteTarget}

@@ -1,0 +1,17 @@
+.row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.label {
+  min-width: 170px;
+  flex-shrink: 0;
+  font-weight: 600;
+  padding-right: 8px;
+}
+
+.control {
+  flex: 1;
+  max-width: 320px;
+}

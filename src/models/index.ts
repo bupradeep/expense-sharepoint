@@ -9,3 +9,4 @@ export * from './IExpenseClaim';
 export * from './IReimbursement';
 export * from './IApproval';
 export * from './IExpenseReport';
+export * from './IPagedResult';

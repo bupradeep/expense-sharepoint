@@ -2,6 +2,7 @@ declare interface IExpenseWebPartStrings {
   PropertyPaneDescription: string;
   BasicGroupName: string;
   ApiBaseUrlFieldLabel: string;
+  DefaultPageSizeFieldLabel: string;
 }
 
 declare module 'ExpenseWebPartStrings' {

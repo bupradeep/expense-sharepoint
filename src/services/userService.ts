@@ -1,8 +1,11 @@
 import { apiClient } from '../utils/ApiClient';
 import { IUser, IUserDto } from '../models/IUser';
+import { IPagedResult } from '../models/IPagedResult';
 
 export const userService = {
   getAll: (): Promise<IUser[]> => apiClient.get<IUser[]>('users'),
+  getPage: (page: number, pageSize: number): Promise<IPagedResult<IUser>> =>
+    apiClient.get<IPagedResult<IUser>>(`users?page=${page}&pageSize=${pageSize}`),
   getById: (id: number): Promise<IUser> => apiClient.get<IUser>(`users/${id}`),
   getByEmployeeObjectId: (employeeObjectId: string): Promise<IUser> =>
     apiClient.get<IUser>(`users/by-employee-object-id/${employeeObjectId}`),

@@ -7,6 +7,7 @@ import { isAdminRole } from '../../../models/Roles';
 import LoadingState from './common/LoadingState';
 import ErrorMessage from './common/ErrorMessage';
 import PageHeader from './common/PageHeader';
+import { PageSizeProvider } from './common/PageSizeContext';
 import { MessageBarType } from '@fluentui/react/lib/MessageBar';
 import AdminConsole from './admin/AdminConsole';
 import EmployeeArea from './employee/EmployeeArea';
@@ -52,7 +53,9 @@ const Expense: React.FC<IExpenseProps> = (props) => {
 
   return (
     <div className={styles.expense}>
-      {renderContent(result)}
+      <PageSizeProvider value={props.defaultPageSize}>
+        {renderContent(result)}
+      </PageSizeProvider>
     </div>
   );
 };

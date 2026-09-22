@@ -13,6 +13,7 @@ import { IExpenseItemDto } from '../../../../models/IExpenseItem';
 import { IUser } from '../../../../models/IUser';
 import { ApiError } from '../../../../models/IApiError';
 import ErrorMessage from '../common/ErrorMessage';
+import FormRow from '../common/FormRow';
 import ExpenseItemEditor from './ExpenseItemEditor';
 
 export interface IExpenseClaimFormProps {
@@ -130,56 +131,52 @@ const ExpenseClaimForm: React.FC<IExpenseClaimFormProps> = (props) => {
   return (
     <Stack tokens={{ childrenGap: 12 }}>
       {formError && <ErrorMessage message={formError} />}
-      <Stack horizontal tokens={{ childrenGap: 12 }} wrap>
+      <FormRow label="Department" required>
         <Dropdown
-          label="Department"
-          required
           selectedKey={departmentId}
           options={departmentOptions}
           onChange={(_e, option) => setDepartmentId(Number(option?.key))}
-          styles={{ root: { width: 200 } }}
         />
+      </FormRow>
+      <FormRow label="Project">
         <Dropdown
-          label="Project"
           selectedKey={projectId}
           options={projectOptions}
           onChange={(_e, option) => setProjectId(option ? Number(option.key) : undefined)}
-          styles={{ root: { width: 200 } }}
         />
+      </FormRow>
+      <FormRow label="Claim Date">
         <TextField
-          label="Claim Date"
           type="date"
           value={claimDate}
           onChange={(_e, value) => setClaimDate(value || '')}
-          styles={{ root: { width: 150 } }}
         />
-      </Stack>
-      <TextField
-        label="Business Purpose"
-        required
-        value={businessPurpose}
-        onChange={(_e, value) => setBusinessPurpose(value || '')}
-      />
-      <Stack horizontal tokens={{ childrenGap: 12 }} wrap>
+      </FormRow>
+      <FormRow label="Business Purpose" required>
         <TextField
-          label="Location"
+          value={businessPurpose}
+          onChange={(_e, value) => setBusinessPurpose(value || '')}
+        />
+      </FormRow>
+      <FormRow label="Location">
+        <TextField
           value={location}
           onChange={(_e, value) => setLocation(value || '')}
-          styles={{ root: { width: 200 } }}
         />
+      </FormRow>
+      <FormRow label="Payment Method">
         <TextField
-          label="Payment Method"
           value={paymentMethod}
           onChange={(_e, value) => setPaymentMethod(value || '')}
-          styles={{ root: { width: 200 } }}
         />
-      </Stack>
-      <TextField
-        label="Remarks"
-        multiline
-        value={remarks}
-        onChange={(_e, value) => setRemarks(value || '')}
-      />
+      </FormRow>
+      <FormRow label="Remarks">
+        <TextField
+          multiline
+          value={remarks}
+          onChange={(_e, value) => setRemarks(value || '')}
+        />
+      </FormRow>
 
       <ExpenseItemEditor items={items} onChange={setItems} />
 

@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { DetailsList, DetailsListLayoutMode, SelectionMode, IColumn } from '@fluentui/react/lib/DetailsList';
 import { CommandBar, ICommandBarItemProps } from '@fluentui/react/lib/CommandBar';
-import { Panel, PanelType } from '@fluentui/react/lib/Panel';
 import { TextField } from '@fluentui/react/lib/TextField';
 import { Toggle } from '@fluentui/react/lib/Toggle';
 import { PrimaryButton, DefaultButton } from '@fluentui/react/lib/Button';
@@ -14,33 +13,32 @@ import ErrorMessage from '../common/ErrorMessage';
 import ConfirmDialog from '../common/ConfirmDialog';
 import TableCard from '../common/TableCard';
 import RowActions from '../common/RowActions';
+import FormRow from '../common/FormRow';
+import PaginationControls from '../common/PaginationControls';
+import { usePagination } from '../common/usePagination';
 
 const emptyForm: IProjectDto = { projectName: '', projectCode: '', clientName: '', costCenter: '', isActive: true };
 
 const ProjectsAdmin: React.FC = () => {
-  const [items, setItems] = React.useState<IProject[] | undefined>(undefined);
-  const [error, setError] = React.useState<string | undefined>(undefined);
-  const [panelOpen, setPanelOpen] = React.useState<boolean>(false);
+  const [formOpen, setFormOpen] = React.useState<boolean>(false);
   const [editing, setEditing] = React.useState<IProject | undefined>(undefined);
   const [form, setForm] = React.useState<IProjectDto>(emptyForm);
   const [saving, setSaving] = React.useState<boolean>(false);
   const [formError, setFormError] = React.useState<string | undefined>(undefined);
   const [deleteTarget, setDeleteTarget] = React.useState<IProject | undefined>(undefined);
+  const [actionError, setActionError] = React.useState<string | undefined>(undefined);
 
-  const load = React.useCallback(() => {
-    setError(undefined);
-    projectService.getAll()
-      .then(setItems)
-      .catch((err: ApiError) => setError(err.message));
-  }, []);
-
-  React.useEffect(() => { load(); }, [load]);
+  const fetchPage = React.useCallback(
+    (page: number, pageSize: number) => projectService.getPage(page, pageSize),
+    []
+  );
+  const pagination = usePagination(fetchPage);
 
   const openCreate = (): void => {
     setEditing(undefined);
     setForm(emptyForm);
     setFormError(undefined);
-    setPanelOpen(true);
+    setFormOpen(true);
   };
 
   const openEdit = (item: IProject): void => {
@@ -53,7 +51,7 @@ const ProjectsAdmin: React.FC = () => {
       isActive: item.IsActive
     });
     setFormError(undefined);
-    setPanelOpen(true);
+    setFormOpen(true);
   };
 
   const save = (): void => {
@@ -66,8 +64,8 @@ const ProjectsAdmin: React.FC = () => {
     request
       .then(() => {
         setSaving(false);
-        setPanelOpen(false);
-        load();
+        setFormOpen(false);
+        pagination.reload();
       })
       .catch((err: ApiError) => {
         setSaving(false);
@@ -82,13 +80,61 @@ const ProjectsAdmin: React.FC = () => {
     projectService.remove(deleteTarget.ProjectId)
       .then(() => {
         setDeleteTarget(undefined);
-        load();
+        pagination.reload();
       })
       .catch((err: ApiError) => {
         setDeleteTarget(undefined);
-        setError(err.message);
+        setActionError(err.message);
       });
   };
+
+  if (formOpen) {
+    return (
+      <TableCard title={editing ? 'Edit Project' : 'New Project'}>
+        <Stack tokens={{ childrenGap: 12 }}>
+          {formError && <ErrorMessage message={formError} />}
+          <FormRow label="Project Name" required>
+            <TextField
+              value={form.projectName}
+              onChange={(_e, value) => setForm({ ...form, projectName: value || '' })}
+            />
+          </FormRow>
+          <FormRow label="Project Code" required>
+            <TextField
+              value={form.projectCode}
+              onChange={(_e, value) => setForm({ ...form, projectCode: value || '' })}
+            />
+          </FormRow>
+          <FormRow label="Client Name">
+            <TextField
+              value={form.clientName}
+              onChange={(_e, value) => setForm({ ...form, clientName: value || '' })}
+            />
+          </FormRow>
+          <FormRow label="Cost Center">
+            <TextField
+              value={form.costCenter}
+              onChange={(_e, value) => setForm({ ...form, costCenter: value || '' })}
+            />
+          </FormRow>
+          <FormRow label="Active">
+            <Toggle
+              checked={form.isActive}
+              onChange={(_e, checked) => setForm({ ...form, isActive: !!checked })}
+            />
+          </FormRow>
+          <Stack horizontal tokens={{ childrenGap: 8 }}>
+            <PrimaryButton
+              text="Save"
+              onClick={save}
+              disabled={saving || !form.projectName || !form.projectCode}
+            />
+            <DefaultButton text="Cancel" onClick={() => setFormOpen(false)} />
+          </Stack>
+        </Stack>
+      </TableCard>
+    );
+  }
 
   const commandBarItems: ICommandBarItemProps[] = [
     { key: 'new', text: 'New Project', iconProps: { iconName: 'Add' }, onClick: openCreate }
@@ -114,63 +160,28 @@ const ProjectsAdmin: React.FC = () => {
   return (
     <div>
       <CommandBar items={commandBarItems} />
-      {error && <ErrorMessage message={error} />}
+      {(pagination.error || actionError) && <ErrorMessage message={pagination.error || actionError || ''} />}
       <TableCard>
-        {!items ? <LoadingState /> : (
-          <DetailsList
-            items={items}
-            columns={columns}
-            layoutMode={DetailsListLayoutMode.justified}
-            selectionMode={SelectionMode.none}
-          />
+        {pagination.loading && pagination.pageItems.length === 0 ? <LoadingState /> : (
+          <>
+            <DetailsList
+              items={pagination.pageItems}
+              columns={columns}
+              layoutMode={DetailsListLayoutMode.justified}
+              selectionMode={SelectionMode.none}
+            />
+            <PaginationControls
+              page={pagination.page}
+              pageSize={pagination.pageSize}
+              totalPages={pagination.totalPages}
+              totalCount={pagination.totalCount}
+              loading={pagination.loading}
+              onPageChange={pagination.setPage}
+              onPageSizeChange={pagination.setPageSize}
+            />
+          </>
         )}
       </TableCard>
-
-      <Panel
-        isOpen={panelOpen}
-        onDismiss={() => setPanelOpen(false)}
-        type={PanelType.smallFixedFar}
-        headerText={editing ? 'Edit Project' : 'New Project'}
-      >
-        <Stack tokens={{ childrenGap: 12 }}>
-          {formError && <ErrorMessage message={formError} />}
-          <TextField
-            label="Project Name"
-            required
-            value={form.projectName}
-            onChange={(_e, value) => setForm({ ...form, projectName: value || '' })}
-          />
-          <TextField
-            label="Project Code"
-            required
-            value={form.projectCode}
-            onChange={(_e, value) => setForm({ ...form, projectCode: value || '' })}
-          />
-          <TextField
-            label="Client Name"
-            value={form.clientName}
-            onChange={(_e, value) => setForm({ ...form, clientName: value || '' })}
-          />
-          <TextField
-            label="Cost Center"
-            value={form.costCenter}
-            onChange={(_e, value) => setForm({ ...form, costCenter: value || '' })}
-          />
-          <Toggle
-            label="Active"
-            checked={form.isActive}
-            onChange={(_e, checked) => setForm({ ...form, isActive: !!checked })}
-          />
-          <Stack horizontal tokens={{ childrenGap: 8 }}>
-            <PrimaryButton
-              text="Save"
-              onClick={save}
-              disabled={saving || !form.projectName || !form.projectCode}
-            />
-            <DefaultButton text="Cancel" onClick={() => setPanelOpen(false)} />
-          </Stack>
-        </Stack>
-      </Panel>
 
       <ConfirmDialog
         hidden={!deleteTarget}

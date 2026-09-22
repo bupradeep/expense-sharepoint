@@ -14,6 +14,8 @@ import LoadingState from '../common/LoadingState';
 import ErrorMessage from '../common/ErrorMessage';
 import ConfirmDialog from '../common/ConfirmDialog';
 import TableCard from '../common/TableCard';
+import PaginationControls from '../common/PaginationControls';
+import { usePagination } from '../common/usePagination';
 import ExpenseClaimForm from './ExpenseClaimForm';
 import ExpenseClaimDetail from './ExpenseClaimDetail';
 
@@ -24,20 +26,17 @@ export interface IMyExpensesProps {
 type View = 'list' | 'create' | 'edit' | 'detail';
 
 const MyExpenses: React.FC<IMyExpensesProps> = (props) => {
-  const [claims, setClaims] = React.useState<IExpenseClaim[] | undefined>(undefined);
-  const [error, setError] = React.useState<string | undefined>(undefined);
   const [view, setView] = React.useState<View>('list');
   const [selectedClaim, setSelectedClaim] = React.useState<IExpenseClaim | undefined>(undefined);
   const [deleteTarget, setDeleteTarget] = React.useState<IExpenseClaim | undefined>(undefined);
+  const [actionError, setActionError] = React.useState<string | undefined>(undefined);
 
-  const load = React.useCallback(() => {
-    setError(undefined);
-    expenseService.list({ employeeId: props.currentUser.UserId })
-      .then(setClaims)
-      .catch((err: ApiError) => setError(err.message));
-  }, [props.currentUser.UserId]);
-
-  React.useEffect(() => { load(); }, [load]);
+  const fetchPage = React.useCallback(
+    (page: number, pageSize: number) =>
+      expenseService.listPage({ employeeId: props.currentUser.UserId }, page, pageSize),
+    [props.currentUser.UserId]
+  );
+  const pagination = usePagination(fetchPage);
 
   const openDetail = (claim: IExpenseClaim): void => {
     expenseService.getById(claim.ExpenseClaimId)
@@ -45,7 +44,7 @@ const MyExpenses: React.FC<IMyExpensesProps> = (props) => {
         setSelectedClaim(full);
         setView('detail');
       })
-      .catch((err: ApiError) => setError(err.message));
+      .catch((err: ApiError) => setActionError(err.message));
   };
 
   const remove = (): void => {
@@ -55,11 +54,11 @@ const MyExpenses: React.FC<IMyExpensesProps> = (props) => {
     expenseService.remove(deleteTarget.ExpenseClaimId, props.currentUser.UserId)
       .then(() => {
         setDeleteTarget(undefined);
-        load();
+        pagination.reload();
       })
       .catch((err: ApiError) => {
         setDeleteTarget(undefined);
-        setError(err.message);
+        setActionError(err.message);
       });
   };
 
@@ -67,7 +66,7 @@ const MyExpenses: React.FC<IMyExpensesProps> = (props) => {
     return (
       <ExpenseClaimForm
         currentUser={props.currentUser}
-        onSaved={() => { setView('list'); load(); }}
+        onSaved={() => { setView('list'); pagination.reload(); }}
         onCancel={() => setView('list')}
       />
     );
@@ -78,7 +77,7 @@ const MyExpenses: React.FC<IMyExpensesProps> = (props) => {
       <ExpenseClaimForm
         currentUser={props.currentUser}
         existingClaim={selectedClaim}
-        onSaved={(claim) => { setSelectedClaim(claim); setView('detail'); load(); }}
+        onSaved={(claim) => { setSelectedClaim(claim); setView('detail'); pagination.reload(); }}
         onCancel={() => setView('detail')}
       />
     );
@@ -90,8 +89,8 @@ const MyExpenses: React.FC<IMyExpensesProps> = (props) => {
         currentUser={props.currentUser}
         claim={selectedClaim}
         onEdit={() => setView('edit')}
-        onChanged={() => { openDetail(selectedClaim); load(); }}
-        onClose={() => { setView('list'); load(); }}
+        onChanged={() => { openDetail(selectedClaim); pagination.reload(); }}
+        onClose={() => { setView('list'); pagination.reload(); }}
       />
     );
   }
@@ -131,15 +130,26 @@ const MyExpenses: React.FC<IMyExpensesProps> = (props) => {
   return (
     <div>
       <CommandBar items={commandBarItems} />
-      {error && <ErrorMessage message={error} />}
+      {(pagination.error || actionError) && <ErrorMessage message={pagination.error || actionError || ''} />}
       <TableCard>
-        {!claims ? <LoadingState /> : (
-          <DetailsList
-            items={claims}
-            columns={columns}
-            layoutMode={DetailsListLayoutMode.justified}
-            selectionMode={SelectionMode.none}
-          />
+        {pagination.loading && pagination.pageItems.length === 0 ? <LoadingState /> : (
+          <>
+            <DetailsList
+              items={pagination.pageItems}
+              columns={columns}
+              layoutMode={DetailsListLayoutMode.justified}
+              selectionMode={SelectionMode.none}
+            />
+            <PaginationControls
+              page={pagination.page}
+              pageSize={pagination.pageSize}
+              totalPages={pagination.totalPages}
+              totalCount={pagination.totalCount}
+              loading={pagination.loading}
+              onPageChange={pagination.setPage}
+              onPageSizeChange={pagination.setPageSize}
+            />
+          </>
         )}
       </TableCard>
 

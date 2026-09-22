@@ -7,14 +7,15 @@ import { Stack } from '@fluentui/react/lib/Stack';
 import { reportService } from '../../../../services/reportService';
 import { departmentService } from '../../../../services/departmentService';
 import { userService } from '../../../../services/userService';
-import { IExpenseReportRow } from '../../../../models/IExpenseReport';
+import { IExpenseReportRow, IExpenseReportFilter } from '../../../../models/IExpenseReport';
 import { IDepartment } from '../../../../models/IDepartment';
 import { IUser } from '../../../../models/IUser';
-import { ApiError } from '../../../../models/IApiError';
 import { formatCurrency, formatDate } from '../../../../utils/Formatters';
 import LoadingState from '../common/LoadingState';
 import ErrorMessage from '../common/ErrorMessage';
 import TableCard from '../common/TableCard';
+import PaginationControls from '../common/PaginationControls';
+import { usePagination } from '../common/usePagination';
 
 function defaultFromDate(): string {
   const d = new Date();
@@ -33,9 +34,19 @@ const ReportsAdmin: React.FC = () => {
   const [toDate, setToDate] = React.useState<string>(defaultToDate());
   const [departmentId, setDepartmentId] = React.useState<number | undefined>(undefined);
   const [employeeId, setEmployeeId] = React.useState<number | undefined>(undefined);
-  const [rows, setRows] = React.useState<IExpenseReportRow[] | undefined>(undefined);
-  const [loading, setLoading] = React.useState<boolean>(false);
-  const [error, setError] = React.useState<string | undefined>(undefined);
+  const [validationError, setValidationError] = React.useState<string | undefined>(undefined);
+  const [hasRun, setHasRun] = React.useState<boolean>(false);
+  const [appliedFilter, setAppliedFilter] = React.useState<IExpenseReportFilter | undefined>(undefined);
+
+  const fetchPage = React.useCallback(
+    (page: number, pageSize: number) => {
+      // appliedFilter is only undefined before the first "Run Report" click, at which point
+      // usePagination is not yet enabled, so this branch never actually executes.
+      return reportService.getExpenseReportPage(appliedFilter as IExpenseReportFilter, page, pageSize);
+    },
+    [appliedFilter]
+  );
+  const pagination = usePagination(fetchPage, hasRun);
 
   React.useEffect(() => {
     departmentService.getAll().then(setDepartments).catch(() => { /* dropdown is best-effort */ });
@@ -47,20 +58,13 @@ const ReportsAdmin: React.FC = () => {
 
   const runReport = (): void => {
     if (!fromDate || !toDate) {
-      setError('From Date and To Date are required.');
+      setValidationError('From Date and To Date are required.');
       return;
     }
-    setLoading(true);
-    setError(undefined);
-    reportService.getExpenseReport({ fromDate, toDate, departmentId, employeeId })
-      .then((data) => {
-        setLoading(false);
-        setRows(data);
-      })
-      .catch((err: ApiError) => {
-        setLoading(false);
-        setError(err.message);
-      });
+    setValidationError(undefined);
+    setAppliedFilter({ fromDate, toDate, departmentId, employeeId });
+    setHasRun(true);
+    pagination.setPage(1);
   };
 
   const columns: IColumn[] = [
@@ -84,7 +88,7 @@ const ReportsAdmin: React.FC = () => {
 
   return (
     <Stack tokens={{ childrenGap: 12 }}>
-      {error && <ErrorMessage message={error} />}
+      {(validationError || pagination.error) && <ErrorMessage message={validationError || pagination.error || ''} />}
       <Stack horizontal tokens={{ childrenGap: 12 }} verticalAlign="end" wrap>
         <TextField
           label="From Date"
@@ -116,18 +120,30 @@ const ReportsAdmin: React.FC = () => {
           onChange={(_e, option) => setEmployeeId(option ? Number(option.key) : undefined)}
           styles={{ root: { width: 180 } }}
         />
-        <PrimaryButton text="Run Report" onClick={runReport} disabled={loading || !fromDate || !toDate} />
+        <PrimaryButton text="Run Report" onClick={runReport} disabled={pagination.loading || !fromDate || !toDate} />
       </Stack>
 
-      {loading && <LoadingState label="Running report..." />}
-      {rows && (
+      {hasRun && (
         <TableCard>
-          <DetailsList
-            items={rows}
-            columns={columns}
-            layoutMode={DetailsListLayoutMode.justified}
-            selectionMode={SelectionMode.none}
-          />
+          {pagination.loading && pagination.pageItems.length === 0 ? <LoadingState label="Running report..." /> : (
+            <>
+              <DetailsList
+                items={pagination.pageItems}
+                columns={columns}
+                layoutMode={DetailsListLayoutMode.justified}
+                selectionMode={SelectionMode.none}
+              />
+              <PaginationControls
+                page={pagination.page}
+                pageSize={pagination.pageSize}
+                totalPages={pagination.totalPages}
+                totalCount={pagination.totalCount}
+                loading={pagination.loading}
+                onPageChange={pagination.setPage}
+                onPageSizeChange={pagination.setPageSize}
+              />
+            </>
+          )}
         </TableCard>
       )}
     </Stack>

@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { DetailsList, DetailsListLayoutMode, SelectionMode, IColumn } from '@fluentui/react/lib/DetailsList';
-import { Panel, PanelType } from '@fluentui/react/lib/Panel';
 import { TextField } from '@fluentui/react/lib/TextField';
 import { PrimaryButton, DefaultButton } from '@fluentui/react/lib/Button';
 import { Stack } from '@fluentui/react/lib/Stack';
@@ -15,6 +14,9 @@ import { formatCurrency, formatDate } from '../../../../utils/Formatters';
 import LoadingState from '../common/LoadingState';
 import ErrorMessage from '../common/ErrorMessage';
 import TableCard from '../common/TableCard';
+import FormRow from '../common/FormRow';
+import PaginationControls from '../common/PaginationControls';
+import { usePagination } from '../common/usePagination';
 
 export interface IReimbursementsAdminProps {
   currentUser: IUser;
@@ -23,49 +25,93 @@ export interface IReimbursementsAdminProps {
 const emptyPaymentForm: IPaymentDto = { processedBy: 0, paymentMethod: 'Bank Transfer' };
 
 const ReimbursementsAdmin: React.FC<IReimbursementsAdminProps> = (props) => {
-  const [pending, setPending] = React.useState<IExpenseClaim[] | undefined>(undefined);
-  const [history, setHistory] = React.useState<IReimbursement[] | undefined>(undefined);
-  const [error, setError] = React.useState<string | undefined>(undefined);
-  const [panelClaim, setPanelClaim] = React.useState<IExpenseClaim | undefined>(undefined);
+  const [payingClaim, setPayingClaim] = React.useState<IExpenseClaim | undefined>(undefined);
   const [form, setForm] = React.useState<IPaymentDto>(emptyPaymentForm);
   const [saving, setSaving] = React.useState<boolean>(false);
   const [formError, setFormError] = React.useState<string | undefined>(undefined);
 
-  const load = React.useCallback(() => {
-    setError(undefined);
-    expenseService.list({ status: 'Approved' })
-      .then(setPending)
-      .catch((err: ApiError) => setError(err.message));
-    reimbursementService.listAll()
-      .then(setHistory)
-      .catch((err: ApiError) => setError(err.message));
-  }, []);
+  const fetchPending = React.useCallback(
+    (page: number, pageSize: number) => expenseService.listPage({ status: 'Approved' }, page, pageSize),
+    []
+  );
+  const pendingPagination = usePagination(fetchPending);
 
-  React.useEffect(() => { load(); }, [load]);
+  const fetchHistory = React.useCallback(
+    (page: number, pageSize: number) => reimbursementService.listPage(page, pageSize),
+    []
+  );
+  const historyPagination = usePagination(fetchHistory);
 
   const openPay = (claim: IExpenseClaim): void => {
-    setPanelClaim(claim);
+    setPayingClaim(claim);
     setForm({ processedBy: props.currentUser.UserId, paymentMethod: 'Bank Transfer', paymentAmount: claim.TotalAmount });
     setFormError(undefined);
   };
 
   const pay = (): void => {
-    if (!panelClaim) {
+    if (!payingClaim) {
       return;
     }
     setSaving(true);
     setFormError(undefined);
-    reimbursementService.pay(panelClaim.ExpenseClaimId, form)
+    reimbursementService.pay(payingClaim.ExpenseClaimId, form)
       .then(() => {
         setSaving(false);
-        setPanelClaim(undefined);
-        load();
+        setPayingClaim(undefined);
+        pendingPagination.reload();
+        historyPagination.reload();
       })
       .catch((err: ApiError) => {
         setSaving(false);
         setFormError(err.message);
       });
   };
+
+  if (payingClaim) {
+    return (
+      <TableCard title={`Mark Claim ${payingClaim.ClaimNumber} as Paid`}>
+        <Stack tokens={{ childrenGap: 12 }}>
+          {formError && <ErrorMessage message={formError} />}
+          <FormRow label="Payment Amount">
+            <TextField
+              type="number"
+              value={form.paymentAmount !== undefined ? String(form.paymentAmount) : ''}
+              onChange={(_e, value) => setForm({ ...form, paymentAmount: value ? Number(value) : undefined })}
+            />
+          </FormRow>
+          <FormRow label="Payment Method">
+            <TextField
+              value={form.paymentMethod}
+              onChange={(_e, value) => setForm({ ...form, paymentMethod: value || '' })}
+            />
+          </FormRow>
+          <FormRow label="Payment Reference">
+            <TextField
+              value={form.paymentReference}
+              onChange={(_e, value) => setForm({ ...form, paymentReference: value || '' })}
+            />
+          </FormRow>
+          <FormRow label="Transaction Reference">
+            <TextField
+              value={form.transactionReference}
+              onChange={(_e, value) => setForm({ ...form, transactionReference: value || '' })}
+            />
+          </FormRow>
+          <FormRow label="Remarks">
+            <TextField
+              multiline
+              value={form.paymentRemarks}
+              onChange={(_e, value) => setForm({ ...form, paymentRemarks: value || '' })}
+            />
+          </FormRow>
+          <Stack horizontal tokens={{ childrenGap: 8 }}>
+            <PrimaryButton text="Confirm Payment" onClick={pay} disabled={saving} />
+            <DefaultButton text="Cancel" onClick={() => setPayingClaim(undefined)} />
+          </Stack>
+        </Stack>
+      </TableCard>
+    );
+  }
 
   const pendingColumns: IColumn[] = [
     { key: 'claimNumber', name: 'Claim #', fieldName: 'ClaimNumber', minWidth: 120, isResizable: true },
@@ -104,75 +150,56 @@ const ReimbursementsAdmin: React.FC<IReimbursementsAdminProps> = (props) => {
 
   return (
     <div>
-      {error && <ErrorMessage message={error} />}
       <Pivot>
         <PivotItem headerText="Awaiting Payment">
+          {pendingPagination.error && <ErrorMessage message={pendingPagination.error} />}
           <TableCard>
-            {!pending ? <LoadingState /> : (
-              <DetailsList
-                items={pending}
-                columns={pendingColumns}
-                layoutMode={DetailsListLayoutMode.justified}
-                selectionMode={SelectionMode.none}
-              />
+            {pendingPagination.loading && pendingPagination.pageItems.length === 0 ? <LoadingState /> : (
+              <>
+                <DetailsList
+                  items={pendingPagination.pageItems}
+                  columns={pendingColumns}
+                  layoutMode={DetailsListLayoutMode.justified}
+                  selectionMode={SelectionMode.none}
+                />
+                <PaginationControls
+                  page={pendingPagination.page}
+                  pageSize={pendingPagination.pageSize}
+                  totalPages={pendingPagination.totalPages}
+                  totalCount={pendingPagination.totalCount}
+                  loading={pendingPagination.loading}
+                  onPageChange={pendingPagination.setPage}
+                  onPageSizeChange={pendingPagination.setPageSize}
+                />
+              </>
             )}
           </TableCard>
         </PivotItem>
         <PivotItem headerText="Payment History">
+          {historyPagination.error && <ErrorMessage message={historyPagination.error} />}
           <TableCard>
-            {!history ? <LoadingState /> : (
-              <DetailsList
-                items={history}
-                columns={historyColumns}
-                layoutMode={DetailsListLayoutMode.justified}
-                selectionMode={SelectionMode.none}
-              />
+            {historyPagination.loading && historyPagination.pageItems.length === 0 ? <LoadingState /> : (
+              <>
+                <DetailsList
+                  items={historyPagination.pageItems}
+                  columns={historyColumns}
+                  layoutMode={DetailsListLayoutMode.justified}
+                  selectionMode={SelectionMode.none}
+                />
+                <PaginationControls
+                  page={historyPagination.page}
+                  pageSize={historyPagination.pageSize}
+                  totalPages={historyPagination.totalPages}
+                  totalCount={historyPagination.totalCount}
+                  loading={historyPagination.loading}
+                  onPageChange={historyPagination.setPage}
+                  onPageSizeChange={historyPagination.setPageSize}
+                />
+              </>
             )}
           </TableCard>
         </PivotItem>
       </Pivot>
-
-      <Panel
-        isOpen={!!panelClaim}
-        onDismiss={() => setPanelClaim(undefined)}
-        type={PanelType.smallFixedFar}
-        headerText={`Mark Claim ${panelClaim?.ClaimNumber || ''} as Paid`}
-      >
-        <Stack tokens={{ childrenGap: 12 }}>
-          {formError && <ErrorMessage message={formError} />}
-          <TextField
-            label="Payment Amount"
-            type="number"
-            value={form.paymentAmount !== undefined ? String(form.paymentAmount) : ''}
-            onChange={(_e, value) => setForm({ ...form, paymentAmount: value ? Number(value) : undefined })}
-          />
-          <TextField
-            label="Payment Method"
-            value={form.paymentMethod}
-            onChange={(_e, value) => setForm({ ...form, paymentMethod: value || '' })}
-          />
-          <TextField
-            label="Payment Reference"
-            value={form.paymentReference}
-            onChange={(_e, value) => setForm({ ...form, paymentReference: value || '' })}
-          />
-          <TextField
-            label="Transaction Reference"
-            value={form.transactionReference}
-            onChange={(_e, value) => setForm({ ...form, transactionReference: value || '' })}
-          />
-          <TextField
-            label="Remarks"
-            multiline
-            value={form.paymentRemarks}
-            onChange={(_e, value) => setForm({ ...form, paymentRemarks: value || '' })}
-          />
-          <Stack horizontal tokens={{ childrenGap: 8 }}>
-            <PrimaryButton text="Confirm Payment" onClick={pay} disabled={saving} />
-            <DefaultButton text="Cancel" onClick={() => setPanelClaim(undefined)} />
-          </Stack>
-        </Stack>
-      </Panel>
     </div>
   );
 };

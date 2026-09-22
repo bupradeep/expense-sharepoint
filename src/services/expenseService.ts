@@ -5,6 +5,7 @@ import {
   IExpenseClaimUpdateDto,
   ISubmitResponse
 } from '../models/IExpenseClaim';
+import { IPagedResult } from '../models/IPagedResult';
 
 export interface IExpenseListFilter {
   employeeId?: number;
@@ -12,10 +13,7 @@ export interface IExpenseListFilter {
   departmentId?: number;
 }
 
-function toQueryString(filter?: IExpenseListFilter): string {
-  if (!filter) {
-    return '';
-  }
+function toQueryString(filter: IExpenseListFilter, page?: number, pageSize?: number): string {
   const parts: string[] = [];
   if (filter.employeeId !== undefined) {
     parts.push(`employeeId=${encodeURIComponent(String(filter.employeeId))}`);
@@ -26,12 +24,18 @@ function toQueryString(filter?: IExpenseListFilter): string {
   if (filter.departmentId !== undefined) {
     parts.push(`departmentId=${encodeURIComponent(String(filter.departmentId))}`);
   }
+  if (page !== undefined) {
+    parts.push(`page=${page}`);
+  }
+  if (pageSize !== undefined) {
+    parts.push(`pageSize=${pageSize}`);
+  }
   return parts.length ? `?${parts.join('&')}` : '';
 }
 
 export const expenseService = {
-  list: (filter?: IExpenseListFilter): Promise<IExpenseClaim[]> =>
-    apiClient.get<IExpenseClaim[]>(`expenses${toQueryString(filter)}`),
+  listPage: (filter: IExpenseListFilter, page: number, pageSize: number): Promise<IPagedResult<IExpenseClaim>> =>
+    apiClient.get<IPagedResult<IExpenseClaim>>(`expenses${toQueryString(filter, page, pageSize)}`),
   getById: (id: number): Promise<IExpenseClaim> => apiClient.get<IExpenseClaim>(`expenses/${id}`),
   create: (dto: IExpenseClaimCreateDto): Promise<IExpenseClaim> => apiClient.post<IExpenseClaim>('expenses', dto),
   update: (id: number, dto: IExpenseClaimUpdateDto): Promise<IExpenseClaim> =>
