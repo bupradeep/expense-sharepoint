@@ -1,48 +1,31 @@
 import * as React from 'react';
 import { DetailsList, DetailsListLayoutMode, SelectionMode, IColumn } from '@fluentui/react/lib/DetailsList';
-import { TextField } from '@fluentui/react/lib/TextField';
-import { PrimaryButton, DefaultButton } from '@fluentui/react/lib/Button';
-import { Stack } from '@fluentui/react/lib/Stack';
+import { IconButton } from '@fluentui/react/lib/Button';
+import { Text } from '@fluentui/react/lib/Text';
+import { expenseService } from '../../../../services/expenseService';
 import { approvalService } from '../../../../services/approvalService';
+import { IExpenseClaim } from '../../../../models/IExpenseClaim';
 import { IPendingApproval } from '../../../../models/IApproval';
 import { IUser } from '../../../../models/IUser';
 import { ApiError } from '../../../../models/IApiError';
-import { formatCurrency, formatDate } from '../../../../utils/Formatters';
+import { formatCurrency } from '../../../../utils/Formatters';
+import { getStatusColor } from '../../../../utils/StatusBadge';
 import LoadingState from '../common/LoadingState';
 import ErrorMessage from '../common/ErrorMessage';
+import EmptyState from '../common/EmptyState';
 import TableCard from '../common/TableCard';
-import FormRow from '../common/FormRow';
 import PaginationControls from '../common/PaginationControls';
 import { usePagination } from '../common/usePagination';
+import ApprovalClaimDetail from './ApprovalClaimDetail';
 
 export interface IMyApprovalsProps {
   currentUser: IUser;
 }
 
-type ActionType = 'approve' | 'reject' | 'sendBack';
-
-interface IPendingAction {
-  claim: IPendingApproval;
-  action: ActionType;
-}
-
-const actionLabels: { [K in ActionType]: string } = {
-  approve: 'Approve',
-  reject: 'Reject',
-  sendBack: 'Send Back'
-};
-
-const actionRequests: { [K in ActionType]: typeof approvalService.approve } = {
-  approve: approvalService.approve,
-  reject: approvalService.reject,
-  sendBack: approvalService.sendBack
-};
-
 const MyApprovals: React.FC<IMyApprovalsProps> = (props) => {
-  const [pendingAction, setPendingAction] = React.useState<IPendingAction | undefined>(undefined);
-  const [comments, setComments] = React.useState<string>('');
-  const [saving, setSaving] = React.useState<boolean>(false);
-  const [formError, setFormError] = React.useState<string | undefined>(undefined);
+  const [selectedSummary, setSelectedSummary] = React.useState<IPendingApproval | undefined>(undefined);
+  const [selectedClaim, setSelectedClaim] = React.useState<IExpenseClaim | undefined>(undefined);
+  const [actionError, setActionError] = React.useState<string | undefined>(undefined);
 
   const fetchPage = React.useCallback(
     (page: number, pageSize: number) => approvalService.getPendingPage(props.currentUser.UserId, page, pageSize),
@@ -50,102 +33,60 @@ const MyApprovals: React.FC<IMyApprovalsProps> = (props) => {
   );
   const pagination = usePagination(fetchPage);
 
-  const openAction = (claim: IPendingApproval, action: ActionType): void => {
-    setPendingAction({ claim, action });
-    setComments('');
-    setFormError(undefined);
-  };
-
-  const commentsRequired = pendingAction?.action === 'reject' || pendingAction?.action === 'sendBack';
-
-  const confirmAction = (): void => {
-    if (!pendingAction) {
-      return;
-    }
-    if (commentsRequired && !comments) {
-      setFormError('Comments are required.');
-      return;
-    }
-
-    setSaving(true);
-    setFormError(undefined);
-
-    const dto = {
-      approverId: props.currentUser.UserId,
-      approvalLevel: pendingAction.claim.ApprovalLevel,
-      comments: comments || undefined
-    };
-
-    const sendAction = actionRequests[pendingAction.action];
-
-    sendAction(pendingAction.claim.ExpenseClaimId, dto)
-      .then(() => {
-        setSaving(false);
-        setPendingAction(undefined);
-        pagination.reload();
+  const openView = (item: IPendingApproval): void => {
+    setActionError(undefined);
+    expenseService.getById(item.ExpenseClaimId)
+      .then((full) => {
+        setSelectedSummary(item);
+        setSelectedClaim(full);
       })
-      .catch((err: ApiError) => {
-        setSaving(false);
-        setFormError(err.message);
-      });
+      .catch((err: ApiError) => setActionError(err.message));
   };
 
-  if (pendingAction) {
+  const closeView = (): void => {
+    setSelectedSummary(undefined);
+    setSelectedClaim(undefined);
+  };
+
+  if (selectedSummary && selectedClaim) {
     return (
-      <TableCard title={`${actionLabels[pendingAction.action]} ${pendingAction.claim.ClaimNumber}`}>
-        <Stack tokens={{ childrenGap: 12 }}>
-          {formError && <ErrorMessage message={formError} />}
-          <FormRow label="Comments" required={commentsRequired}>
-            <TextField
-              multiline
-              value={comments}
-              onChange={(_e, value) => setComments(value || '')}
-            />
-          </FormRow>
-          <Stack horizontal tokens={{ childrenGap: 8 }}>
-            <PrimaryButton
-              text={actionLabels[pendingAction.action]}
-              onClick={confirmAction}
-              disabled={saving}
-            />
-            <DefaultButton text="Cancel" onClick={() => setPendingAction(undefined)} />
-          </Stack>
-        </Stack>
-      </TableCard>
+      <ApprovalClaimDetail
+        currentUser={props.currentUser}
+        claim={selectedClaim}
+        approvalSummary={selectedSummary}
+        onActionComplete={() => { closeView(); pagination.reload(); }}
+        onClose={closeView}
+      />
     );
   }
 
   const columns: IColumn[] = [
     { key: 'claimNumber', name: 'Claim #', fieldName: 'ClaimNumber', minWidth: 130, isResizable: true },
-    { key: 'employee', name: 'Employee', fieldName: 'EmployeeName', minWidth: 140, isResizable: true },
-    { key: 'department', name: 'Department', fieldName: 'DepartmentName', minWidth: 120, isResizable: true },
-    { key: 'purpose', name: 'Business Purpose', fieldName: 'BusinessPurpose', minWidth: 180, isResizable: true },
+    { key: 'employee', name: 'Employee', fieldName: 'EmployeeName', minWidth: 150, isResizable: true },
+    { key: 'department', name: 'Department', fieldName: 'DepartmentName', minWidth: 130, isResizable: true },
     {
       key: 'amount', name: 'Amount', minWidth: 100,
       onRender: (item: IPendingApproval) => formatCurrency(item.TotalAmount)
     },
     {
-      key: 'submitted', name: 'Submitted', minWidth: 100,
-      onRender: (item: IPendingApproval) => formatDate(item.SubmittedAt)
+      key: 'status', name: 'Status', minWidth: 150,
+      onRender: (item: IPendingApproval) => <Text styles={{ root: { color: getStatusColor(item.Status) } }}>{item.Status}</Text>
     },
-    { key: 'status', name: 'Status', fieldName: 'Status', minWidth: 130 },
     {
-      key: 'actions', name: '', minWidth: 260,
+      key: 'actions', name: '', minWidth: 60,
       onRender: (item: IPendingApproval) => (
-        <Stack horizontal tokens={{ childrenGap: 8 }}>
-          <PrimaryButton text="Approve" onClick={() => openAction(item, 'approve')} />
-          <DefaultButton text="Reject" onClick={() => openAction(item, 'reject')} />
-          <DefaultButton text="Send Back" onClick={() => openAction(item, 'sendBack')} />
-        </Stack>
+        <IconButton iconProps={{ iconName: 'RedEye' }} title="View" ariaLabel="View" onClick={() => openView(item)} />
       )
     }
   ];
 
   return (
     <div>
-      {pagination.error && <ErrorMessage message={pagination.error} />}
+      {(pagination.error || actionError) && <ErrorMessage message={pagination.error || actionError || ''} />}
       <TableCard>
-        {pagination.loading && pagination.pageItems.length === 0 ? <LoadingState /> : (
+        {pagination.loading && pagination.pageItems.length === 0 ? <LoadingState /> : pagination.totalCount === 0 ? (
+          <EmptyState message="No claims found." />
+        ) : (
           <>
             <DetailsList
               items={pagination.pageItems}

@@ -12,7 +12,7 @@ import { MessageBarType } from '@fluentui/react/lib/MessageBar';
 import AdminConsole from './admin/AdminConsole';
 import EmployeeArea from './employee/EmployeeArea';
 
-function renderContent(result: CurrentUserResult | undefined): JSX.Element {
+function renderContent(props: IExpenseProps, result: CurrentUserResult | undefined): JSX.Element {
   if (!result) {
     return <LoadingState label="Loading your profile..." />;
   }
@@ -35,7 +35,7 @@ function renderContent(result: CurrentUserResult | undefined): JSX.Element {
       <PageHeader user={result.user} />
       {isAdminRole(result.user.Role)
         ? <AdminConsole currentUser={result.user} />
-        : <EmployeeArea currentUser={result.user} />}
+        : <EmployeeArea context={props.context} currentUser={result.user} />}
     </>
   );
 }
@@ -44,17 +44,17 @@ const Expense: React.FC<IExpenseProps> = (props) => {
   const [result, setResult] = React.useState<CurrentUserResult | undefined>(undefined);
 
   React.useEffect(() => {
-    configureApiClient(props.apiBaseUrl);
+    configureApiClient(props.apiBaseUrl, props.context, props.apiResourceId);
 
     resolveCurrentUser(props.context.pageContext.aadInfo?.userId?.toString())
       .then(setResult)
       .catch((err: Error) => setResult({ state: 'error', message: err.message || 'Unexpected error' }));
-  }, [props.apiBaseUrl]);
+  }, [props.apiBaseUrl, props.apiResourceId]);
 
   return (
     <div className={styles.expense}>
       <PageSizeProvider value={props.defaultPageSize}>
-        {renderContent(result)}
+        {renderContent(props, result)}
       </PageSizeProvider>
     </div>
   );

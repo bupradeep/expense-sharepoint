@@ -13,9 +13,12 @@ import { IUser } from '../../../../models/IUser';
 import { formatCurrency, formatDate } from '../../../../utils/Formatters';
 import LoadingState from '../common/LoadingState';
 import ErrorMessage from '../common/ErrorMessage';
+import EmptyState from '../common/EmptyState';
 import TableCard from '../common/TableCard';
 import PaginationControls from '../common/PaginationControls';
 import { usePagination } from '../common/usePagination';
+
+const ALL_KEY = 'all';
 
 function defaultFromDate(): string {
   const d = new Date();
@@ -53,8 +56,14 @@ const ReportsAdmin: React.FC = () => {
     userService.getAll().then(setUsers).catch(() => { /* dropdown is best-effort */ });
   }, []);
 
-  const departmentOptions: IDropdownOption[] = departments.map((d) => ({ key: d.DepartmentId, text: d.DepartmentName }));
-  const employeeOptions: IDropdownOption[] = users.map((u) => ({ key: u.UserId, text: u.FullName }));
+  const departmentOptions: IDropdownOption[] = [
+    { key: ALL_KEY, text: '--All--' },
+    ...departments.map((d) => ({ key: d.DepartmentId, text: d.DepartmentName }))
+  ];
+  const employeeOptions: IDropdownOption[] = [
+    { key: ALL_KEY, text: '--All--' },
+    ...users.map((u) => ({ key: u.UserId, text: u.FullName }))
+  ];
 
   const runReport = (): void => {
     if (!fromDate || !toDate) {
@@ -96,7 +105,7 @@ const ReportsAdmin: React.FC = () => {
           required
           value={fromDate}
           onChange={(_e, value) => setFromDate(value || '')}
-          styles={{ root: { width: 150 } }}
+          styles={{ root: { width: 150, marginTop: 6 } }}
         />
         <TextField
           label="To Date"
@@ -104,20 +113,20 @@ const ReportsAdmin: React.FC = () => {
           required
           value={toDate}
           onChange={(_e, value) => setToDate(value || '')}
-          styles={{ root: { width: 150 } }}
+          styles={{ root: { width: 150, marginTop: 6 } }}
         />
         <Dropdown
           label="Department"
-          selectedKey={departmentId}
+          selectedKey={departmentId === undefined ? ALL_KEY : departmentId}
           options={departmentOptions}
-          onChange={(_e, option) => setDepartmentId(option ? Number(option.key) : undefined)}
+          onChange={(_e, option) => setDepartmentId(option && option.key !== ALL_KEY ? Number(option.key) : undefined)}
           styles={{ root: { width: 180 } }}
         />
         <Dropdown
           label="Employee"
-          selectedKey={employeeId}
+          selectedKey={employeeId === undefined ? ALL_KEY : employeeId}
           options={employeeOptions}
-          onChange={(_e, option) => setEmployeeId(option ? Number(option.key) : undefined)}
+          onChange={(_e, option) => setEmployeeId(option && option.key !== ALL_KEY ? Number(option.key) : undefined)}
           styles={{ root: { width: 180 } }}
         />
         <PrimaryButton text="Run Report" onClick={runReport} disabled={pagination.loading || !fromDate || !toDate} />
@@ -125,7 +134,9 @@ const ReportsAdmin: React.FC = () => {
 
       {hasRun && (
         <TableCard>
-          {pagination.loading && pagination.pageItems.length === 0 ? <LoadingState label="Running report..." /> : (
+          {pagination.loading && pagination.pageItems.length === 0 ? <LoadingState label="Running report..." /> : pagination.totalCount === 0 ? (
+            <EmptyState message="No expense claims found." />
+          ) : (
             <>
               <DetailsList
                 items={pagination.pageItems}

@@ -1,6 +1,14 @@
 import { apiClient } from '../utils/ApiClient';
-import { IExpenseReportRow, IExpenseReportFilter } from '../models/IExpenseReport';
+import { IExpenseReportRow, IExpenseReportFilter, IDashboardSummary, IDashboardFilter } from '../models/IExpenseReport';
 import { IPagedResult } from '../models/IPagedResult';
+
+function toDashboardQueryString(filter: IDashboardFilter): string {
+  const parts: string[] = [];
+  if (filter.fromDate) parts.push(`fromDate=${encodeURIComponent(filter.fromDate)}`);
+  if (filter.toDate) parts.push(`toDate=${encodeURIComponent(filter.toDate)}`);
+  if (filter.departmentId !== undefined) parts.push(`departmentId=${encodeURIComponent(String(filter.departmentId))}`);
+  return parts.length ? `?${parts.join('&')}` : '';
+}
 
 function toQueryString(filter: IExpenseReportFilter, page: number, pageSize: number): string {
   const parts: string[] = [
@@ -24,5 +32,7 @@ export const reportService = {
     page: number,
     pageSize: number
   ): Promise<IPagedResult<IExpenseReportRow>> =>
-    apiClient.get<IPagedResult<IExpenseReportRow>>(`reports/expenses${toQueryString(filter, page, pageSize)}`)
+    apiClient.get<IPagedResult<IExpenseReportRow>>(`reports/expenses${toQueryString(filter, page, pageSize)}`),
+  getDashboardSummary: (filter: IDashboardFilter = {}): Promise<IDashboardSummary> =>
+    apiClient.get<IDashboardSummary>(`reports/dashboard${toDashboardQueryString(filter)}`)
 };

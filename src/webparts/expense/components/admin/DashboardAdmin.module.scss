@@ -1,0 +1,88 @@
+.filterRow {
+  margin-bottom: 4px;
+
+  :global(.ms-Label) {
+    padding: 0 0 4px;
+    line-height: 16px;
+  }
+}
+
+.kpiCard {
+  min-width: 150px;
+  background-color: #ffffff;
+  border: 1px solid #edebe9;
+  border-radius: 4px;
+  box-shadow: 0 1.6px 3.6px 0 rgba(0, 0, 0, 0.1);
+  padding: 12px 16px;
+}
+
+.kpiLabel {
+  display: block;
+  font-size: 12px;
+  color: #605e5c;
+  margin-bottom: 4px;
+}
+
+.kpiValue {
+  display: block;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.panel {
+  min-width: 280px;
+  flex: 1;
+}
+
+.barTrack {
+  height: 8px;
+  background-color: #f3f2f1;
+  border-radius: 4px;
+  margin-top: 2px;
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  border-radius: 4px;
+}
+
+.barFillAccent {
+  height: 100%;
+  border-radius: 4px;
+  background-color: #0078d4;
+}
+
+.trendRow {
+  align-items: flex-end;
+  padding-top: 8px;
+}
+
+.trendColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 70px;
+}
+
+.trendAmount {
+  margin-bottom: 4px;
+  white-space: nowrap;
+}
+
+.trendBarTrack {
+  width: 24px;
+  height: 120px;
+  background-color: #f3f2f1;
+  border-radius: 4px;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+
+.trendBarFill {
+  width: 100%;
+  background-color: #0078d4;
+  border-radius: 4px 4px 0 0;
+  min-height: 2px;
+}

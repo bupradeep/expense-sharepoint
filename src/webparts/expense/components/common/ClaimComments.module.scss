@@ -1,0 +1,21 @@
+.comment {
+  border-bottom: 1px solid #f3f2f1;
+  padding-bottom: 8px;
+}
+
+.author {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.timestamp {
+  color: #a19f9d;
+}
+
+.text {
+  white-space: pre-wrap;
+}
+
+.input {
+  flex-grow: 1;
+}

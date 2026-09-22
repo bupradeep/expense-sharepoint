@@ -11,11 +11,12 @@ import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
 import * as strings from 'ExpenseWebPartStrings';
 import Expense from './components/Expense';
 import { IExpenseProps } from './components/IExpenseProps';
-import { DEFAULT_API_BASE_URL } from '../../utils/Constants';
+import { DEFAULT_API_BASE_URL, DEFAULT_API_RESOURCE_ID } from '../../utils/Constants';
 import { PAGE_SIZE_OPTIONS, DEFAULT_PAGE_SIZE } from './components/common/PageSizeContext';
 
 export interface IExpenseWebPartProps {
   apiBaseUrl: string;
+  apiResourceId: string;
   defaultPageSize: number;
 }
 
@@ -27,6 +28,7 @@ export default class ExpenseWebPart extends BaseClientSideWebPart<IExpenseWebPar
       {
         context: this.context,
         apiBaseUrl: this.properties.apiBaseUrl || DEFAULT_API_BASE_URL,
+        apiResourceId: this.properties.apiResourceId || DEFAULT_API_RESOURCE_ID,
         defaultPageSize: this.properties.defaultPageSize || DEFAULT_PAGE_SIZE
       }
     );
@@ -55,6 +57,9 @@ export default class ExpenseWebPart extends BaseClientSideWebPart<IExpenseWebPar
               groupFields: [
                 PropertyPaneTextField('apiBaseUrl', {
                   label: strings.ApiBaseUrlFieldLabel
+                }),
+                PropertyPaneTextField('apiResourceId', {
+                  label: strings.ApiResourceIdFieldLabel
                 }),
                 PropertyPaneDropdown('defaultPageSize', {
                   label: strings.DefaultPageSizeFieldLabel,

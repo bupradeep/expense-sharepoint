@@ -18,3 +18,39 @@ export interface IExpenseReportFilter {
   departmentId?: number;
   employeeId?: number;
 }
+
+export interface IDashboardStatusBreakdown {
+  status: string;
+  count: number;
+  amount: number;
+}
+
+export interface IDashboardDepartmentBreakdown {
+  departmentName: string;
+  count: number;
+  amount: number;
+}
+
+export interface IDashboardMonthBreakdown {
+  month: string;
+  count: number;
+  amount: number;
+}
+
+export interface IDashboardSummary {
+  totalClaims: number;
+  totalAmount: number;
+  pendingApprovalsCount: number;
+  reimbursedAmount: number;
+  approvedAwaitingPayment: number;
+  averageClaimAmount: number;
+  byStatus: IDashboardStatusBreakdown[];
+  byDepartment: IDashboardDepartmentBreakdown[];
+  byMonth: IDashboardMonthBreakdown[];
+}
+
+export interface IDashboardFilter {
+  fromDate?: string;
+  toDate?: string;
+  departmentId?: number;
+}

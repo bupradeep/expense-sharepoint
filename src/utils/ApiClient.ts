@@ -15,8 +15,9 @@ import {
   ResolveOnData,
   RejectOnError
 } from '@pnp/queryable';
+import { WebPartContext } from '@microsoft/sp-webpart-base';
 import { ApiError, IApiErrorInfo } from '../models/IApiError';
-import { DEFAULT_API_BASE_URL } from './Constants';
+import { DEFAULT_API_BASE_URL, DEFAULT_API_RESOURCE_ID } from './Constants';
 
 // Builds a Queryable pointed at the backend's base URL, with everything it needs to actually work:
 // - BrowserFetchWithRetry: perform the request via fetch()
@@ -33,17 +34,43 @@ function createApiRoot(baseUrl: string): Queryable {
   );
 }
 
-// `configureApiClient` can change this after the module has already loaded (e.g. once the web part
-// reads its property-pane setting), so every request must read the current value, not a fixed one.
+// `configureApiClient` can change these after the module has already loaded (e.g. once the web part
+// reads its property-pane settings), so every request must read the current values, not fixed ones.
 let apiRoot: Queryable = createApiRoot(DEFAULT_API_BASE_URL);
+let aadContext: WebPartContext | undefined;
+let apiResourceId: string = DEFAULT_API_RESOURCE_ID;
 
-export function configureApiClient(baseUrl: string): void {
+export function configureApiClient(baseUrl: string, context?: WebPartContext, resourceId?: string): void {
   apiRoot = createApiRoot(baseUrl || DEFAULT_API_BASE_URL);
+  aadContext = context;
+  apiResourceId = resourceId || DEFAULT_API_RESOURCE_ID;
+}
+
+// The backend now validates an Entra ID (Azure AD) bearer token on incoming requests. SPFx acquires
+// this for the signed-in user via the platform's own AAD token broker -- no client secret is ever
+// needed (or safe to hold) in this browser-side code; that's only used by the backend to verify the
+// token's signature against Azure AD's public keys. Returns undefined (and the request goes out
+// without an Authorization header) until the web part's "apiResourceId" property is configured, so
+// this stays backward compatible with an unauthenticated/local backend.
+async function getBearerToken(): Promise<string | undefined> {
+  if (!aadContext || !apiResourceId) {
+    return undefined;
+  }
+
+  const tokenProvider = await aadContext.aadTokenProviderFactory.getTokenProvider();
+  return tokenProvider.getToken(apiResourceId);
 }
 
 async function sendRequest<T>(path: string, operation: typeof get, init?: RequestInit): Promise<T> {
   try {
-    return await op<T>(new Queryable(apiRoot, path), operation, init);
+    const token = await getBearerToken();
+    const request = new Queryable(apiRoot, path);
+
+    if (token) {
+      request.using(InjectHeaders({ Authorization: `Bearer ${token}` }));
+    }
+
+    return await op<T>(request, operation, init);
   } catch (err) {
     throw new ApiError(await toApiErrorInfo(err));
   }

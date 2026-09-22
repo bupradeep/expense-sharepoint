@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { DetailsList, DetailsListLayoutMode, SelectionMode, IColumn } from '@fluentui/react/lib/DetailsList';
-import { CommandBar, ICommandBarItemProps } from '@fluentui/react/lib/CommandBar';
 import { TextField } from '@fluentui/react/lib/TextField';
 import { Toggle } from '@fluentui/react/lib/Toggle';
 import { PrimaryButton, DefaultButton } from '@fluentui/react/lib/Button';
@@ -10,18 +9,24 @@ import { IProject, IProjectDto } from '../../../../models/IProject';
 import { ApiError } from '../../../../models/IApiError';
 import LoadingState from '../common/LoadingState';
 import ErrorMessage from '../common/ErrorMessage';
+import EmptyState from '../common/EmptyState';
 import ConfirmDialog from '../common/ConfirmDialog';
 import TableCard from '../common/TableCard';
 import RowActions from '../common/RowActions';
 import FormRow from '../common/FormRow';
+import ListToolbar from '../common/ListToolbar';
 import PaginationControls from '../common/PaginationControls';
 import { usePagination } from '../common/usePagination';
+import ProjectDetail from './ProjectDetail';
 
 const emptyForm: IProjectDto = { projectName: '', projectCode: '', clientName: '', costCenter: '', isActive: true };
 
+type View = 'list' | 'form' | 'detail';
+
 const ProjectsAdmin: React.FC = () => {
-  const [formOpen, setFormOpen] = React.useState<boolean>(false);
+  const [view, setView] = React.useState<View>('list');
   const [editing, setEditing] = React.useState<IProject | undefined>(undefined);
+  const [viewing, setViewing] = React.useState<IProject | undefined>(undefined);
   const [form, setForm] = React.useState<IProjectDto>(emptyForm);
   const [saving, setSaving] = React.useState<boolean>(false);
   const [formError, setFormError] = React.useState<string | undefined>(undefined);
@@ -38,7 +43,7 @@ const ProjectsAdmin: React.FC = () => {
     setEditing(undefined);
     setForm(emptyForm);
     setFormError(undefined);
-    setFormOpen(true);
+    setView('form');
   };
 
   const openEdit = (item: IProject): void => {
@@ -51,7 +56,12 @@ const ProjectsAdmin: React.FC = () => {
       isActive: item.IsActive
     });
     setFormError(undefined);
-    setFormOpen(true);
+    setView('form');
+  };
+
+  const openView = (item: IProject): void => {
+    setViewing(item);
+    setView('detail');
   };
 
   const save = (): void => {
@@ -64,7 +74,7 @@ const ProjectsAdmin: React.FC = () => {
     request
       .then(() => {
         setSaving(false);
-        setFormOpen(false);
+        setView('list');
         pagination.reload();
       })
       .catch((err: ApiError) => {
@@ -88,7 +98,7 @@ const ProjectsAdmin: React.FC = () => {
       });
   };
 
-  if (formOpen) {
+  if (view === 'form') {
     return (
       <TableCard title={editing ? 'Edit Project' : 'New Project'}>
         <Stack tokens={{ childrenGap: 12 }}>
@@ -129,40 +139,40 @@ const ProjectsAdmin: React.FC = () => {
               onClick={save}
               disabled={saving || !form.projectName || !form.projectCode}
             />
-            <DefaultButton text="Cancel" onClick={() => setFormOpen(false)} />
+            <DefaultButton text="Cancel" onClick={() => setView('list')} />
           </Stack>
         </Stack>
       </TableCard>
     );
   }
 
-  const commandBarItems: ICommandBarItemProps[] = [
-    { key: 'new', text: 'New Project', iconProps: { iconName: 'Add' }, onClick: openCreate }
-  ];
+  if (view === 'detail' && viewing) {
+    return <ProjectDetail project={viewing} onClose={() => setView('list')} />;
+  }
 
   const columns: IColumn[] = [
-    { key: 'name', name: 'Project', fieldName: 'ProjectName', minWidth: 160, isResizable: true },
-    { key: 'code', name: 'Code', fieldName: 'ProjectCode', minWidth: 100, isResizable: true },
-    { key: 'client', name: 'Client', fieldName: 'ClientName', minWidth: 120, isResizable: true },
-    { key: 'costCenter', name: 'Cost Center', fieldName: 'CostCenter', minWidth: 110, isResizable: true },
+    { key: 'name', name: 'Project', fieldName: 'ProjectName', minWidth: 200, isResizable: true },
+    { key: 'code', name: 'Code', fieldName: 'ProjectCode', minWidth: 120, isResizable: true },
     {
-      key: 'active', name: 'Active', minWidth: 70,
+      key: 'active', name: 'Active', minWidth: 80,
       onRender: (item: IProject) => (item.IsActive ? 'Yes' : 'No')
     },
     {
-      key: 'actions', name: '', minWidth: 90,
+      key: 'actions', name: '', minWidth: 120,
       onRender: (item: IProject) => (
-        <RowActions onEdit={() => openEdit(item)} onDelete={() => setDeleteTarget(item)} />
+        <RowActions onView={() => openView(item)} onEdit={() => openEdit(item)} onDelete={() => setDeleteTarget(item)} />
       )
     }
   ];
 
   return (
     <div>
-      <CommandBar items={commandBarItems} />
+      <ListToolbar buttonText="New Project" onButtonClick={openCreate} />
       {(pagination.error || actionError) && <ErrorMessage message={pagination.error || actionError || ''} />}
       <TableCard>
-        {pagination.loading && pagination.pageItems.length === 0 ? <LoadingState /> : (
+        {pagination.loading && pagination.pageItems.length === 0 ? <LoadingState /> : pagination.totalCount === 0 ? (
+          <EmptyState message="No projects found." />
+        ) : (
           <>
             <DetailsList
               items={pagination.pageItems}

@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { DetailsList, DetailsListLayoutMode, SelectionMode, IColumn } from '@fluentui/react/lib/DetailsList';
-import { CommandBar, ICommandBarItemProps } from '@fluentui/react/lib/CommandBar';
 import { TextField } from '@fluentui/react/lib/TextField';
 import { Toggle } from '@fluentui/react/lib/Toggle';
 import { Dropdown, IDropdownOption } from '@fluentui/react/lib/Dropdown';
@@ -14,12 +13,15 @@ import { UserRoles, UserRole } from '../../../../models/Roles';
 import { ApiError } from '../../../../models/IApiError';
 import LoadingState from '../common/LoadingState';
 import ErrorMessage from '../common/ErrorMessage';
+import EmptyState from '../common/EmptyState';
 import ConfirmDialog from '../common/ConfirmDialog';
 import TableCard from '../common/TableCard';
 import RowActions from '../common/RowActions';
 import FormRow from '../common/FormRow';
+import ListToolbar from '../common/ListToolbar';
 import PaginationControls from '../common/PaginationControls';
 import { usePagination } from '../common/usePagination';
+import UserDetail from './UserDetail';
 
 const emptyForm: IUserDto = {
   fullName: '',
@@ -32,10 +34,13 @@ const emptyForm: IUserDto = {
 
 const roleOptions: IDropdownOption[] = Object.keys(UserRoles).map((role) => ({ key: role, text: role }));
 
+type View = 'list' | 'form' | 'detail';
+
 const UsersAdmin: React.FC = () => {
   const [departments, setDepartments] = React.useState<IDepartment[]>([]);
-  const [formOpen, setFormOpen] = React.useState<boolean>(false);
+  const [view, setView] = React.useState<View>('list');
   const [editing, setEditing] = React.useState<IUser | undefined>(undefined);
+  const [viewing, setViewing] = React.useState<IUser | undefined>(undefined);
   const [form, setForm] = React.useState<IUserDto>(emptyForm);
   const [saving, setSaving] = React.useState<boolean>(false);
   const [formError, setFormError] = React.useState<string | undefined>(undefined);
@@ -58,7 +63,7 @@ const UsersAdmin: React.FC = () => {
     setEditing(undefined);
     setForm(emptyForm);
     setFormError(undefined);
-    setFormOpen(true);
+    setView('form');
   };
 
   const openEdit = (item: IUser): void => {
@@ -73,7 +78,12 @@ const UsersAdmin: React.FC = () => {
       isActive: item.IsActive
     });
     setFormError(undefined);
-    setFormOpen(true);
+    setView('form');
+  };
+
+  const openView = (item: IUser): void => {
+    setViewing(item);
+    setView('detail');
   };
 
   const save = (): void => {
@@ -86,7 +96,7 @@ const UsersAdmin: React.FC = () => {
     request
       .then(() => {
         setSaving(false);
-        setFormOpen(false);
+        setView('list');
         pagination.reload();
       })
       .catch((err: ApiError) => {
@@ -110,7 +120,7 @@ const UsersAdmin: React.FC = () => {
       });
   };
 
-  if (formOpen) {
+  if (view === 'form') {
     return (
       <TableCard title={editing ? 'Edit User' : 'New User'}>
         <Stack tokens={{ childrenGap: 12 }}>
@@ -165,44 +175,37 @@ const UsersAdmin: React.FC = () => {
               onClick={save}
               disabled={saving || !form.fullName || !form.email || !form.employeeCode || !form.employeeObjectId}
             />
-            <DefaultButton text="Cancel" onClick={() => setFormOpen(false)} />
+            <DefaultButton text="Cancel" onClick={() => setView('list')} />
           </Stack>
         </Stack>
       </TableCard>
     );
   }
 
-  const commandBarItems: ICommandBarItemProps[] = [
-    { key: 'new', text: 'New User', iconProps: { iconName: 'Add' }, onClick: openCreate }
-  ];
+  if (view === 'detail' && viewing) {
+    return <UserDetail user={viewing} onClose={() => setView('list')} />;
+  }
 
   const columns: IColumn[] = [
-    { key: 'name', name: 'Full Name', fieldName: 'FullName', minWidth: 140, isResizable: true },
-    { key: 'email', name: 'Email', fieldName: 'Email', minWidth: 180, isResizable: true },
-    { key: 'code', name: 'Employee Code', fieldName: 'EmployeeCode', minWidth: 110, isResizable: true },
-    { key: 'role', name: 'Role', fieldName: 'Role', minWidth: 110, isResizable: true },
+    { key: 'name', name: 'Full Name', fieldName: 'FullName', minWidth: 160, isResizable: true },
+    { key: 'email', name: 'Email', fieldName: 'Email', minWidth: 200, isResizable: true },
+    { key: 'role', name: 'Role', fieldName: 'Role', minWidth: 120, isResizable: true },
     {
-      key: 'department', name: 'Department', minWidth: 120,
-      onRender: (item: IUser) => item.Department?.DepartmentName || ''
-    },
-    {
-      key: 'active', name: 'Active', minWidth: 70,
-      onRender: (item: IUser) => (item.IsActive ? 'Yes' : 'No')
-    },
-    {
-      key: 'actions', name: '', minWidth: 90,
+      key: 'actions', name: '', minWidth: 120,
       onRender: (item: IUser) => (
-        <RowActions onEdit={() => openEdit(item)} onDelete={() => setDeleteTarget(item)} />
+        <RowActions onView={() => openView(item)} onEdit={() => openEdit(item)} onDelete={() => setDeleteTarget(item)} />
       )
     }
   ];
 
   return (
     <div>
-      <CommandBar items={commandBarItems} />
+      <ListToolbar buttonText="New User" onButtonClick={openCreate} />
       {(pagination.error || actionError) && <ErrorMessage message={pagination.error || actionError || ''} />}
       <TableCard>
-        {pagination.loading && pagination.pageItems.length === 0 ? <LoadingState /> : (
+        {pagination.loading && pagination.pageItems.length === 0 ? <LoadingState /> : pagination.totalCount === 0 ? (
+          <EmptyState message="No users found." />
+        ) : (
           <>
             <DetailsList
               items={pagination.pageItems}

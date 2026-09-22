@@ -1,6 +1,7 @@
 export interface IReimbursement {
   ReimbursementId: number;
   ExpenseClaimId: number;
+  ExpenseClaim?: { ClaimNumber: string };
   ProcessedBy: number;
   PaymentReference?: string;
   PaymentDate?: string;
@@ -19,4 +20,10 @@ export interface IPaymentDto {
   paymentMethod?: string;
   transactionReference?: string;
   paymentRemarks?: string;
+}
+
+export interface IReimbursementFilter {
+  fromDate?: string;
+  toDate?: string;
+  claimNumber?: string;
 }

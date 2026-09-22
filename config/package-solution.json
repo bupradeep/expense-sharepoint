@@ -31,6 +31,19 @@
         "id": "ba216070-4bba-4a7a-bb45-375563bffaf5",
         "version": "1.0.0.0"
       }
+    ],
+    // Declares that this solution needs a delegated Azure AD permission to call the Expense backend
+    // API now that it validates bearer tokens. "resource" must be the display name (or app id) of
+    // the backend's Azure AD app registration (the one AZURE_CLIENT_ID in the backend's .env points
+    // to), and "scope" must be a scope actually exposed by that app registration under "Expose an
+    // API" (a common convention is "user_impersonation" or "access_as_user" -- update this to match
+    // whatever was configured). After deploying, a SharePoint/tenant admin must approve this request
+    // once under SharePoint Admin Center > Advanced > API access, or getToken() calls will fail.
+    "webApiPermissionRequests": [
+      {
+        "resource": "REPLACE_WITH_BACKEND_APP_REGISTRATION_NAME",
+        "scope": "user_impersonation"
+      }
     ]
   },
   "paths": {

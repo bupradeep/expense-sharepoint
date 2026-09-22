@@ -1,9 +1,10 @@
 import * as React from 'react';
 import { DetailsList, DetailsListLayoutMode, SelectionMode, IColumn } from '@fluentui/react/lib/DetailsList';
-import { CommandBar, ICommandBarItemProps } from '@fluentui/react/lib/CommandBar';
 import { IconButton } from '@fluentui/react/lib/Button';
+import { Toggle } from '@fluentui/react/lib/Toggle';
 import { Stack } from '@fluentui/react/lib/Stack';
 import { Text } from '@fluentui/react/lib/Text';
+import { WebPartContext } from '@microsoft/sp-webpart-base';
 import { expenseService } from '../../../../services/expenseService';
 import { IExpenseClaim } from '../../../../models/IExpenseClaim';
 import { IUser } from '../../../../models/IUser';
@@ -12,14 +13,17 @@ import { formatCurrency, formatDate } from '../../../../utils/Formatters';
 import { getStatusColor } from '../../../../utils/StatusBadge';
 import LoadingState from '../common/LoadingState';
 import ErrorMessage from '../common/ErrorMessage';
+import EmptyState from '../common/EmptyState';
 import ConfirmDialog from '../common/ConfirmDialog';
 import TableCard from '../common/TableCard';
+import ListToolbar from '../common/ListToolbar';
 import PaginationControls from '../common/PaginationControls';
 import { usePagination } from '../common/usePagination';
 import ExpenseClaimForm from './ExpenseClaimForm';
 import ExpenseClaimDetail from './ExpenseClaimDetail';
 
 export interface IMyExpensesProps {
+  context: WebPartContext;
   currentUser: IUser;
 }
 
@@ -30,11 +34,16 @@ const MyExpenses: React.FC<IMyExpensesProps> = (props) => {
   const [selectedClaim, setSelectedClaim] = React.useState<IExpenseClaim | undefined>(undefined);
   const [deleteTarget, setDeleteTarget] = React.useState<IExpenseClaim | undefined>(undefined);
   const [actionError, setActionError] = React.useState<string | undefined>(undefined);
+  const [showDeleted, setShowDeleted] = React.useState<boolean>(false);
 
   const fetchPage = React.useCallback(
     (page: number, pageSize: number) =>
-      expenseService.listPage({ employeeId: props.currentUser.UserId }, page, pageSize),
-    [props.currentUser.UserId]
+      expenseService.listPage(
+        { employeeId: props.currentUser.UserId, excludeDeleted: !showDeleted },
+        page,
+        pageSize
+      ),
+    [props.currentUser.UserId, showDeleted]
   );
   const pagination = usePagination(fetchPage);
 
@@ -43,6 +52,15 @@ const MyExpenses: React.FC<IMyExpensesProps> = (props) => {
       .then((full) => {
         setSelectedClaim(full);
         setView('detail');
+      })
+      .catch((err: ApiError) => setActionError(err.message));
+  };
+
+  const openEdit = (claim: IExpenseClaim): void => {
+    expenseService.getById(claim.ExpenseClaimId)
+      .then((full) => {
+        setSelectedClaim(full);
+        setView('edit');
       })
       .catch((err: ApiError) => setActionError(err.message));
   };
@@ -65,6 +83,7 @@ const MyExpenses: React.FC<IMyExpensesProps> = (props) => {
   if (view === 'create') {
     return (
       <ExpenseClaimForm
+        context={props.context}
         currentUser={props.currentUser}
         onSaved={() => { setView('list'); pagination.reload(); }}
         onCancel={() => setView('list')}
@@ -75,6 +94,7 @@ const MyExpenses: React.FC<IMyExpensesProps> = (props) => {
   if (view === 'edit' && selectedClaim) {
     return (
       <ExpenseClaimForm
+        context={props.context}
         currentUser={props.currentUser}
         existingClaim={selectedClaim}
         onSaved={(claim) => { setSelectedClaim(claim); setView('detail'); pagination.reload(); }}
@@ -86,6 +106,7 @@ const MyExpenses: React.FC<IMyExpensesProps> = (props) => {
   if (view === 'detail' && selectedClaim) {
     return (
       <ExpenseClaimDetail
+        context={props.context}
         currentUser={props.currentUser}
         claim={selectedClaim}
         onEdit={() => setView('edit')}
@@ -94,10 +115,6 @@ const MyExpenses: React.FC<IMyExpensesProps> = (props) => {
       />
     );
   }
-
-  const commandBarItems: ICommandBarItemProps[] = [
-    { key: 'new', text: 'New Claim', iconProps: { iconName: 'Add' }, onClick: () => setView('create') }
-  ];
 
   const columns: IColumn[] = [
     { key: 'claimNumber', name: 'Claim #', fieldName: 'ClaimNumber', minWidth: 140, isResizable: true },
@@ -115,12 +132,15 @@ const MyExpenses: React.FC<IMyExpensesProps> = (props) => {
       onRender: (item: IExpenseClaim) => <Text styles={{ root: { color: getStatusColor(item.Status) } }}>{item.Status}</Text>
     },
     {
-      key: 'actions', name: '', minWidth: 90,
+      key: 'actions', name: '', minWidth: 130,
       onRender: (item: IExpenseClaim) => (
         <Stack horizontal tokens={{ childrenGap: 4 }}>
           <IconButton iconProps={{ iconName: 'RedEye' }} title="View" ariaLabel="View" onClick={() => openDetail(item)} />
           {item.Status === 'Draft' && (
-            <IconButton iconProps={{ iconName: 'Delete' }} title="Delete" ariaLabel="Delete" onClick={() => setDeleteTarget(item)} />
+            <>
+              <IconButton iconProps={{ iconName: 'Edit' }} title="Edit" ariaLabel="Edit" onClick={() => openEdit(item)} />
+              <IconButton iconProps={{ iconName: 'Delete' }} title="Delete" ariaLabel="Delete" onClick={() => setDeleteTarget(item)} />
+            </>
           )}
         </Stack>
       )
@@ -129,10 +149,23 @@ const MyExpenses: React.FC<IMyExpensesProps> = (props) => {
 
   return (
     <div>
-      <CommandBar items={commandBarItems} />
+      <ListToolbar
+        buttonText="New Claim"
+        onButtonClick={() => setView('create')}
+        endContent={(
+          <Toggle
+            inlineLabel
+            label="Show deleted"
+            checked={showDeleted}
+            onChange={(_e, checked) => { setShowDeleted(!!checked); pagination.setPage(1); }}
+          />
+        )}
+      />
       {(pagination.error || actionError) && <ErrorMessage message={pagination.error || actionError || ''} />}
       <TableCard>
-        {pagination.loading && pagination.pageItems.length === 0 ? <LoadingState /> : (
+        {pagination.loading && pagination.pageItems.length === 0 ? <LoadingState /> : pagination.totalCount === 0 ? (
+          <EmptyState message="No expense claims found." />
+        ) : (
           <>
             <DetailsList
               items={pagination.pageItems}

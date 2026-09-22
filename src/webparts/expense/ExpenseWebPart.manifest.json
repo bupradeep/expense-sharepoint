@@ -22,6 +22,7 @@
     "officeFabricIconFontName": "Page",
     "properties": {
       "apiBaseUrl": "http://localhost:3000",
+      "apiResourceId": "",
       "defaultPageSize": 5
     }
   }]

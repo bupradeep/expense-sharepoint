@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { DetailsList, DetailsListLayoutMode, SelectionMode, IColumn } from '@fluentui/react/lib/DetailsList';
-import { CommandBar, ICommandBarItemProps } from '@fluentui/react/lib/CommandBar';
 import { TextField } from '@fluentui/react/lib/TextField';
 import { Toggle } from '@fluentui/react/lib/Toggle';
 import { PrimaryButton, DefaultButton } from '@fluentui/react/lib/Button';
@@ -10,18 +9,24 @@ import { IDepartment, IDepartmentDto } from '../../../../models/IDepartment';
 import { ApiError } from '../../../../models/IApiError';
 import LoadingState from '../common/LoadingState';
 import ErrorMessage from '../common/ErrorMessage';
+import EmptyState from '../common/EmptyState';
 import ConfirmDialog from '../common/ConfirmDialog';
 import TableCard from '../common/TableCard';
 import RowActions from '../common/RowActions';
 import FormRow from '../common/FormRow';
+import ListToolbar from '../common/ListToolbar';
 import PaginationControls from '../common/PaginationControls';
 import { usePagination } from '../common/usePagination';
+import DepartmentDetail from './DepartmentDetail';
 
 const emptyForm: IDepartmentDto = { departmentName: '', isActive: true };
 
+type View = 'list' | 'form' | 'detail';
+
 const DepartmentsAdmin: React.FC = () => {
-  const [formOpen, setFormOpen] = React.useState<boolean>(false);
+  const [view, setView] = React.useState<View>('list');
   const [editing, setEditing] = React.useState<IDepartment | undefined>(undefined);
+  const [viewing, setViewing] = React.useState<IDepartment | undefined>(undefined);
   const [form, setForm] = React.useState<IDepartmentDto>(emptyForm);
   const [saving, setSaving] = React.useState<boolean>(false);
   const [formError, setFormError] = React.useState<string | undefined>(undefined);
@@ -38,14 +43,19 @@ const DepartmentsAdmin: React.FC = () => {
     setEditing(undefined);
     setForm(emptyForm);
     setFormError(undefined);
-    setFormOpen(true);
+    setView('form');
   };
 
   const openEdit = (item: IDepartment): void => {
     setEditing(item);
     setForm({ departmentName: item.DepartmentName, isActive: item.IsActive });
     setFormError(undefined);
-    setFormOpen(true);
+    setView('form');
+  };
+
+  const openView = (item: IDepartment): void => {
+    setViewing(item);
+    setView('detail');
   };
 
   const save = (): void => {
@@ -58,7 +68,7 @@ const DepartmentsAdmin: React.FC = () => {
     request
       .then(() => {
         setSaving(false);
-        setFormOpen(false);
+        setView('list');
         pagination.reload();
       })
       .catch((err: ApiError) => {
@@ -82,7 +92,7 @@ const DepartmentsAdmin: React.FC = () => {
       });
   };
 
-  if (formOpen) {
+  if (view === 'form') {
     return (
       <TableCard title={editing ? 'Edit Department' : 'New Department'}>
         <Stack tokens={{ childrenGap: 12 }}>
@@ -101,16 +111,16 @@ const DepartmentsAdmin: React.FC = () => {
           </FormRow>
           <Stack horizontal tokens={{ childrenGap: 8 }}>
             <PrimaryButton text="Save" onClick={save} disabled={saving || !form.departmentName} />
-            <DefaultButton text="Cancel" onClick={() => setFormOpen(false)} />
+            <DefaultButton text="Cancel" onClick={() => setView('list')} />
           </Stack>
         </Stack>
       </TableCard>
     );
   }
 
-  const commandBarItems: ICommandBarItemProps[] = [
-    { key: 'new', text: 'New Department', iconProps: { iconName: 'Add' }, onClick: openCreate }
-  ];
+  if (view === 'detail' && viewing) {
+    return <DepartmentDetail department={viewing} onClose={() => setView('list')} />;
+  }
 
   const columns: IColumn[] = [
     { key: 'name', name: 'Department', fieldName: 'DepartmentName', minWidth: 200, isResizable: true },
@@ -119,19 +129,21 @@ const DepartmentsAdmin: React.FC = () => {
       onRender: (item: IDepartment) => (item.IsActive ? 'Yes' : 'No')
     },
     {
-      key: 'actions', name: '', minWidth: 90,
+      key: 'actions', name: '', minWidth: 120,
       onRender: (item: IDepartment) => (
-        <RowActions onEdit={() => openEdit(item)} onDelete={() => setDeleteTarget(item)} />
+        <RowActions onView={() => openView(item)} onEdit={() => openEdit(item)} onDelete={() => setDeleteTarget(item)} />
       )
     }
   ];
 
   return (
     <div>
-      <CommandBar items={commandBarItems} />
+      <ListToolbar buttonText="New Department" onButtonClick={openCreate} />
       {(pagination.error || actionError) && <ErrorMessage message={pagination.error || actionError || ''} />}
       <TableCard>
-        {pagination.loading && pagination.pageItems.length === 0 ? <LoadingState /> : (
+        {pagination.loading && pagination.pageItems.length === 0 ? <LoadingState /> : pagination.totalCount === 0 ? (
+          <EmptyState message="No departments found." />
+        ) : (
           <>
             <DetailsList
               items={pagination.pageItems}

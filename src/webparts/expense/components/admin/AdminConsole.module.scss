@@ -1,0 +1,29 @@
+.adminConsole {
+  width: 100%;
+}
+
+.tabBar {
+  border-bottom: 1px solid #edebe9;
+  flex-wrap: wrap;
+}
+
+.tabButton {
+  height: 40px;
+  font-weight: 400;
+
+  :global(.ms-Button-flexContainer) {
+    border-bottom: 2px solid transparent;
+  }
+}
+
+.tabButtonActive {
+  font-weight: 600;
+
+  :global(.ms-Button-flexContainer) {
+    border-bottom: 2px solid #0078d4;
+  }
+}
+
+.tabContent {
+  margin-top: 20px;
+}

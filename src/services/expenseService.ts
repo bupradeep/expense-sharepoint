@@ -5,12 +5,16 @@ import {
   IExpenseClaimUpdateDto,
   ISubmitResponse
 } from '../models/IExpenseClaim';
+import { IExpenseComment, IExpenseCommentDto } from '../models/IExpenseComment';
 import { IPagedResult } from '../models/IPagedResult';
 
 export interface IExpenseListFilter {
   employeeId?: number;
   status?: string;
   departmentId?: number;
+  fromDate?: string;
+  toDate?: string;
+  excludeDeleted?: boolean;
 }
 
 function toQueryString(filter: IExpenseListFilter, page?: number, pageSize?: number): string {
@@ -23,6 +27,15 @@ function toQueryString(filter: IExpenseListFilter, page?: number, pageSize?: num
   }
   if (filter.departmentId !== undefined) {
     parts.push(`departmentId=${encodeURIComponent(String(filter.departmentId))}`);
+  }
+  if (filter.fromDate !== undefined) {
+    parts.push(`fromDate=${encodeURIComponent(filter.fromDate)}`);
+  }
+  if (filter.toDate !== undefined) {
+    parts.push(`toDate=${encodeURIComponent(filter.toDate)}`);
+  }
+  if (filter.excludeDeleted) {
+    parts.push('excludeDeleted=true');
   }
   if (page !== undefined) {
     parts.push(`page=${page}`);
@@ -43,5 +56,9 @@ export const expenseService = {
   remove: (id: number, updatedBy: number): Promise<void> =>
     apiClient.delete<void>(`expenses/${id}`, { updatedBy }),
   submit: (id: number, userId: number): Promise<ISubmitResponse> =>
-    apiClient.post<ISubmitResponse>(`expenses/${id}/submit`, { userId })
+    apiClient.post<ISubmitResponse>(`expenses/${id}/submit`, { userId }),
+  getComments: (id: number): Promise<IExpenseComment[]> =>
+    apiClient.get<IExpenseComment[]>(`expenses/${id}/comments`),
+  addComment: (id: number, dto: IExpenseCommentDto): Promise<IExpenseComment[]> =>
+    apiClient.post<IExpenseComment[]>(`expenses/${id}/comments`, dto)
 };

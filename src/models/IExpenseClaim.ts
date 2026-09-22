@@ -2,6 +2,7 @@ import { IUser } from './IUser';
 import { IDepartment } from './IDepartment';
 import { IProject } from './IProject';
 import { IExpenseItem, IExpenseItemDto } from './IExpenseItem';
+import { IExpenseComment } from './IExpenseComment';
 
 export type ExpenseClaimStatus =
   | 'Draft'
@@ -36,14 +37,14 @@ export interface IExpenseClaim {
   SubmittedAt?: string;
   Items?: IExpenseItem[];
   Receipts?: unknown[];
+  Comments?: IExpenseComment[];
 }
 
 export interface IExpenseClaimCreateDto {
   claimNumber: string;
   employeeId: number;
   departmentId: number;
-  projectId?: number;
-  claimDate?: string;
+  projectId: number;
   businessPurpose: string;
   location?: string;
   paymentMethod?: string;

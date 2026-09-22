@@ -13,6 +13,7 @@ import { ApiError } from '../../../../models/IApiError';
 import { formatCurrency, formatDate } from '../../../../utils/Formatters';
 import LoadingState from '../common/LoadingState';
 import ErrorMessage from '../common/ErrorMessage';
+import EmptyState from '../common/EmptyState';
 import TableCard from '../common/TableCard';
 import FormRow from '../common/FormRow';
 import PaginationControls from '../common/PaginationControls';
@@ -30,6 +31,10 @@ const ReimbursementsAdmin: React.FC<IReimbursementsAdminProps> = (props) => {
   const [saving, setSaving] = React.useState<boolean>(false);
   const [formError, setFormError] = React.useState<string | undefined>(undefined);
 
+  const [historyFromDate, setHistoryFromDate] = React.useState<string>('');
+  const [historyToDate, setHistoryToDate] = React.useState<string>('');
+  const [historyClaimNumber, setHistoryClaimNumber] = React.useState<string>('');
+
   const fetchPending = React.useCallback(
     (page: number, pageSize: number) => expenseService.listPage({ status: 'Approved' }, page, pageSize),
     []
@@ -37,8 +42,17 @@ const ReimbursementsAdmin: React.FC<IReimbursementsAdminProps> = (props) => {
   const pendingPagination = usePagination(fetchPending);
 
   const fetchHistory = React.useCallback(
-    (page: number, pageSize: number) => reimbursementService.listPage(page, pageSize),
-    []
+    (page: number, pageSize: number) =>
+      reimbursementService.listPage(
+        {
+          fromDate: historyFromDate || undefined,
+          toDate: historyToDate || undefined,
+          claimNumber: historyClaimNumber || undefined
+        },
+        page,
+        pageSize
+      ),
+    [historyFromDate, historyToDate, historyClaimNumber]
   );
   const historyPagination = usePagination(fetchHistory);
 
@@ -134,7 +148,10 @@ const ReimbursementsAdmin: React.FC<IReimbursementsAdminProps> = (props) => {
   ];
 
   const historyColumns: IColumn[] = [
-    { key: 'claimId', name: 'Claim Id', fieldName: 'ExpenseClaimId', minWidth: 80 },
+    {
+      key: 'claimNumber', name: 'Claim #', minWidth: 120,
+      onRender: (item: IReimbursement) => item.ExpenseClaim?.ClaimNumber || ''
+    },
     {
       key: 'amount', name: 'Amount Paid', minWidth: 100,
       onRender: (item: IReimbursement) => formatCurrency(item.PaymentAmount)
@@ -154,7 +171,9 @@ const ReimbursementsAdmin: React.FC<IReimbursementsAdminProps> = (props) => {
         <PivotItem headerText="Awaiting Payment">
           {pendingPagination.error && <ErrorMessage message={pendingPagination.error} />}
           <TableCard>
-            {pendingPagination.loading && pendingPagination.pageItems.length === 0 ? <LoadingState /> : (
+            {pendingPagination.loading && pendingPagination.pageItems.length === 0 ? <LoadingState /> : pendingPagination.totalCount === 0 ? (
+              <EmptyState message="No claims awaiting payment." />
+            ) : (
               <>
                 <DetailsList
                   items={pendingPagination.pageItems}
@@ -177,8 +196,33 @@ const ReimbursementsAdmin: React.FC<IReimbursementsAdminProps> = (props) => {
         </PivotItem>
         <PivotItem headerText="Payment History">
           {historyPagination.error && <ErrorMessage message={historyPagination.error} />}
+          <Stack horizontal tokens={{ childrenGap: 12 }} verticalAlign="end" wrap styles={{ root: { marginTop: 12 } }}>
+            <TextField
+              label="From Date"
+              type="date"
+              value={historyFromDate}
+              onChange={(_e, value) => { setHistoryFromDate(value || ''); historyPagination.setPage(1); }}
+              styles={{ root: { width: 150, marginTop: 6 } }}
+            />
+            <TextField
+              label="To Date"
+              type="date"
+              value={historyToDate}
+              onChange={(_e, value) => { setHistoryToDate(value || ''); historyPagination.setPage(1); }}
+              styles={{ root: { width: 150, marginTop: 6 } }}
+            />
+            <TextField
+              label="Claim Number"
+              placeholder="Search claim #"
+              value={historyClaimNumber}
+              onChange={(_e, value) => { setHistoryClaimNumber(value || ''); historyPagination.setPage(1); }}
+              styles={{ root: { width: 180 } }}
+            />
+          </Stack>
           <TableCard>
-            {historyPagination.loading && historyPagination.pageItems.length === 0 ? <LoadingState /> : (
+            {historyPagination.loading && historyPagination.pageItems.length === 0 ? <LoadingState /> : historyPagination.totalCount === 0 ? (
+              <EmptyState message="No payment history found." />
+            ) : (
               <>
                 <DetailsList
                   items={historyPagination.pageItems}

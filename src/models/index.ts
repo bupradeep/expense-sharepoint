@@ -10,3 +10,8 @@ export * from './IReimbursement';
 export * from './IApproval';
 export * from './IExpenseReport';
 export * from './IPagedResult';
+export * from './IApprovalHistory';
+export * from './IApprovalRule';
+export * from './IExpenseReceipt';
+export * from './IExpenseComment';
+export * from './IAuditLog';
