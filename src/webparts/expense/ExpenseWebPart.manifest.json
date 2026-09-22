@@ -21,7 +21,7 @@
     "description": { "default": "Expense claim" },
     "officeFabricIconFontName": "Page",
     "properties": {
-      "description": "expense"
+      "apiBaseUrl": "http://localhost:3000"
     }
   }]
 }

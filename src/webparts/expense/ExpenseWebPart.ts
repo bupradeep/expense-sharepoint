@@ -10,9 +10,10 @@ import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
 import * as strings from 'ExpenseWebPartStrings';
 import Expense from './components/Expense';
 import { IExpenseProps } from './components/IExpenseProps';
+import { DEFAULT_API_BASE_URL } from '../../utils/Constants';
 
 export interface IExpenseWebPartProps {
-  description: string;
+  apiBaseUrl: string;
 }
 
 export default class ExpenseWebPart extends BaseClientSideWebPart<IExpenseWebPartProps> {
@@ -21,7 +22,8 @@ export default class ExpenseWebPart extends BaseClientSideWebPart<IExpenseWebPar
     const element: React.ReactElement<IExpenseProps> = React.createElement(
       Expense,
       {
-        description: this.properties.description
+        context: this.context,
+        apiBaseUrl: this.properties.apiBaseUrl || DEFAULT_API_BASE_URL
       }
     );
 
@@ -47,8 +49,8 @@ export default class ExpenseWebPart extends BaseClientSideWebPart<IExpenseWebPar
             {
               groupName: strings.BasicGroupName,
               groupFields: [
-                PropertyPaneTextField('description', {
-                  label: strings.DescriptionFieldLabel
+                PropertyPaneTextField('apiBaseUrl', {
+                  label: strings.ApiBaseUrlFieldLabel
                 })
               ]
             }

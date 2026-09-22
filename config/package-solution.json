@@ -6,14 +6,32 @@
     "version": "1.0.0.0",
     "includeClientSideAssets": true,
     "skipFeatureDeployment": true,
-    "isDomainIsolated": true,
     "developer": {
       "name": "",
       "websiteUrl": "",
       "privacyUrl": "",
       "termsOfUseUrl": "",
       "mpnId": ""
-    }
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "Expense claim"
+      },
+      "longDescription": {
+        "default": "Expense claim"
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": []
+    },
+    "features": [
+      {
+        "title": "expense Feature",
+        "description": "The feature that activates elements of the expense solution.",
+        "id": "ba216070-4bba-4a7a-bb45-375563bffaf5",
+        "version": "1.0.0.0"
+      }
+    ]
   },
   "paths": {
     "zippedPackage": "solution/expense.sppkg"

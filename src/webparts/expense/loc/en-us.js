@@ -1,7 +1,7 @@
 define([], function() {
   return {
-    "PropertyPaneDescription": "Description",
-    "BasicGroupName": "Group Name",
-    "DescriptionFieldLabel": "Description Field"
+    "PropertyPaneDescription": "Configure the Expense app",
+    "BasicGroupName": "Settings",
+    "ApiBaseUrlFieldLabel": "Expense API base URL"
   }
 });

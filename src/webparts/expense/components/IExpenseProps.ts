@@ -1,3 +1,6 @@
+import { WebPartContext } from '@microsoft/sp-webpart-base';
+
 export interface IExpenseProps {
-  description: string;
+  context: WebPartContext;
+  apiBaseUrl: string;
 }

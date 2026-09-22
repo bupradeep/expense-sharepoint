@@ -1,25 +1,60 @@
 import * as React from 'react';
 import styles from './Expense.module.scss';
 import { IExpenseProps } from './IExpenseProps';
-import { escape } from '@microsoft/sp-lodash-subset';
+import { configureApiClient } from '../../../utils/ApiClient';
+import { resolveCurrentUser, CurrentUserResult } from '../../../utils/CurrentUserResolver';
+import { isAdminRole } from '../../../models/Roles';
+import LoadingState from './common/LoadingState';
+import ErrorMessage from './common/ErrorMessage';
+import PageHeader from './common/PageHeader';
+import { MessageBarType } from '@fluentui/react/lib/MessageBar';
+import AdminConsole from './admin/AdminConsole';
+import EmployeeArea from './employee/EmployeeArea';
 
-export default class Expense extends React.Component<IExpenseProps, {}> {
-  public render(): React.ReactElement<IExpenseProps> {
+function renderContent(result: CurrentUserResult | undefined): JSX.Element {
+  if (!result) {
+    return <LoadingState label="Loading your profile..." />;
+  }
+
+  if (result.state === 'not-registered') {
     return (
-      <div className={ styles.expense }>
-        <div className={ styles.container }>
-          <div className={ styles.row }>
-            <div className={ styles.column }>
-              <span className={ styles.title }>Welcome to SharePoint!</span>
-              <p className={ styles.subTitle }>Customize SharePoint experiences using Web Parts.</p>
-              <p className={ styles.description }>{escape(this.props.description)}</p>
-              <a href="https://aka.ms/spfx" className={ styles.button }>
-                <span className={ styles.label }>Learn more</span>
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
+      <ErrorMessage
+        messageType={MessageBarType.warning}
+        message="Your account isn't set up in the Expense system yet. Contact your administrator."
+      />
     );
   }
+
+  if (result.state === 'error') {
+    return <ErrorMessage message={result.message} />;
+  }
+
+  return (
+    <>
+      <PageHeader user={result.user} />
+      {isAdminRole(result.user.Role)
+        ? <AdminConsole currentUser={result.user} />
+        : <EmployeeArea currentUser={result.user} />}
+    </>
+  );
 }
+
+const Expense: React.FC<IExpenseProps> = (props) => {
+  const [result, setResult] = React.useState<CurrentUserResult | undefined>(undefined);
+
+  React.useEffect(() => {
+    configureApiClient(props.apiBaseUrl);
+
+    resolveCurrentUser(props.context.pageContext.aadInfo?.userId?.toString())
+      .then(setResult)
+      .catch((err: Error) => setResult({ state: 'error', message: err.message || 'Unexpected error' }));
+  }, [props.apiBaseUrl]);
+
+  return (
+    <div className={styles.expense}>
+      {renderContent(result)}
+    </div>
+  );
+};
+
+export default Expense;

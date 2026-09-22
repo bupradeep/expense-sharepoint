@@ -8,7 +8,7 @@ Short summary on functionality and used technologies.
 
 ## Used SharePoint Framework Version
 
-![version](https://img.shields.io/badge/version-1.11-green.svg)
+![version](https://img.shields.io/badge/version-1.23.2-green.svg)
 
 ## Applies to
 
@@ -45,10 +45,11 @@ Version|Date|Comments
 - Clone this repository
 - Ensure that you are at the solution folder
 - in the command-line run:
+  - **npm install -g @rushstack/heft**
   - **npm install**
-  - **gulp serve**
+  - **heft start**
 
-> Include any additional steps as needed.
+> Include any additional steps as needed. Other build commands can be listed using `heft --help`.
 
 ## Features
 

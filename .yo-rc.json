@@ -1,12 +1,23 @@
 {
   "@microsoft/generator-sharepoint": {
-    "isCreatingSolution": true,
+    "whichFolder": "subdir",
+    "solutionName": "expense",
     "environment": "spo",
-    "version": "1.11.0",
+    "packageManager": "npm",
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "useGulp": false,
+    "componentType": "webpart",
+    "template": "react",
+    "componentName": "Expense",
+    "componentDescription": "Expense claim",
+    "plusBeta": false,
+    "isCreatingSolution": true,
+    "nodeVersion": "22.14.0",
+    "sdksVersions": {},
+    "version": "1.23.2",
     "libraryName": "expense",
     "libraryId": "4aecb1ff-3d43-4e9c-8455-babb74d44278",
-    "packageManager": "npm",
-    "isDomainIsolated": true,
-    "componentType": "webpart"
+    "solutionShortDescription": "Expense claim"
   }
 }
