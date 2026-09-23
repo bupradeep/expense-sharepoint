@@ -1,12 +1,10 @@
 import * as React from 'react';
-import { DetailsList, DetailsListLayoutMode, SelectionMode, IColumn } from '@fluentui/react/lib/DetailsList';
 import { TextField } from '@fluentui/react/lib/TextField';
 import { PrimaryButton, DefaultButton } from '@fluentui/react/lib/Button';
 import { Stack } from '@fluentui/react/lib/Stack';
 import { Text } from '@fluentui/react/lib/Text';
 import { approvalService } from '../../../../services/approvalService';
 import { IExpenseClaim } from '../../../../models/IExpenseClaim';
-import { IExpenseItem } from '../../../../models/IExpenseItem';
 import { IPendingApproval } from '../../../../models/IApproval';
 import { IUser } from '../../../../models/IUser';
 import { ApiError } from '../../../../models/IApiError';
@@ -16,6 +14,8 @@ import ErrorMessage from '../common/ErrorMessage';
 import TableCard from '../common/TableCard';
 import FormRow from '../common/FormRow';
 import ClaimComments from '../common/ClaimComments';
+import BackButton from '../common/BackButton';
+import ExpenseItemsView from '../common/ExpenseItemsView';
 
 export interface IApprovalClaimDetailProps {
   currentUser: IUser;
@@ -38,23 +38,6 @@ const actionRequests: { [K in ActionType]: typeof approvalService.approve } = {
   reject: approvalService.reject,
   sendBack: approvalService.sendBack
 };
-
-const itemColumns: IColumn[] = [
-  {
-    key: 'category', name: 'Category', minWidth: 120,
-    onRender: (item: IExpenseItem) => item.ExpenseCategory?.CategoryName || ''
-  },
-  {
-    key: 'date', name: 'Date', minWidth: 100,
-    onRender: (item: IExpenseItem) => formatDate(item.ExpenseDate)
-  },
-  {
-    key: 'amount', name: 'Amount', minWidth: 100,
-    onRender: (item: IExpenseItem) => formatCurrency(item.Amount)
-  },
-  { key: 'merchant', name: 'Merchant', fieldName: 'MerchantName', minWidth: 140 },
-  { key: 'description', name: 'Description', fieldName: 'Description', minWidth: 180 }
-];
 
 const ApprovalClaimDetail: React.FC<IApprovalClaimDetailProps> = (props) => {
   const { claim } = props;
@@ -138,12 +121,7 @@ const ApprovalClaimDetail: React.FC<IApprovalClaimDetailProps> = (props) => {
       {claim.SubmittedAt && <Text>Submitted: {formatDate(claim.SubmittedAt)}</Text>}
 
       <TableCard title="Expense Items">
-        <DetailsList
-          items={claim.Items || []}
-          columns={itemColumns}
-          layoutMode={DetailsListLayoutMode.justified}
-          selectionMode={SelectionMode.none}
-        />
+        <ExpenseItemsView items={claim.Items || []} />
       </TableCard>
 
       <ClaimComments claim={claim} currentUser={props.currentUser} />
@@ -152,8 +130,9 @@ const ApprovalClaimDetail: React.FC<IApprovalClaimDetailProps> = (props) => {
         <PrimaryButton text="Approve" onClick={() => openAction('approve')} />
         <DefaultButton text="Reject" onClick={() => openAction('reject')} />
         <DefaultButton text="Send Back" onClick={() => openAction('sendBack')} />
-        <DefaultButton text="Back" onClick={props.onClose} />
       </Stack>
+
+      <BackButton onClick={props.onClose} />
     </Stack>
   );
 };

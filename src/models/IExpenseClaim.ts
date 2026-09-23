@@ -7,16 +7,13 @@ import { IExpenseComment } from './IExpenseComment';
 export type ExpenseClaimStatus =
   | 'Draft'
   | 'Submitted'
-  | 'Manager Approved'
   | 'Department Head Review'
   | 'Finance Review'
-  | 'Finance Head Review'
   | 'Approved'
   | 'Rejected'
   | 'Sent Back'
   | 'Deleted'
-  | 'Reimbursed'
-  | 'Pending Approval';
+  | 'Reimbursed';
 
 export interface IExpenseClaim {
   ExpenseClaimId: number;
@@ -36,7 +33,6 @@ export interface IExpenseClaim {
   Status: ExpenseClaimStatus;
   SubmittedAt?: string;
   Items?: IExpenseItem[];
-  Receipts?: unknown[];
   Comments?: IExpenseComment[];
 }
 

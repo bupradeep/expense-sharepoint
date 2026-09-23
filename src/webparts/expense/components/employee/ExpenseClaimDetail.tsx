@@ -9,13 +9,14 @@ import { IExpenseClaim } from '../../../../models/IExpenseClaim';
 import { IExpenseReceipt } from '../../../../models/IExpenseReceipt';
 import { IUser } from '../../../../models/IUser';
 import { ApiError } from '../../../../models/IApiError';
-import { formatCurrency, formatDate } from '../../../../utils/Formatters';
+import { formatCurrency } from '../../../../utils/Formatters';
 import { getStatusColor } from '../../../../utils/StatusBadge';
 import ErrorMessage from '../common/ErrorMessage';
 import TableCard from '../common/TableCard';
 import ClaimComments from '../common/ClaimComments';
+import BackButton from '../common/BackButton';
+import ExpenseItemsView from '../common/ExpenseItemsView';
 import ItemReceipts from './ItemReceipts';
-import styles from './ExpenseItemEditor.module.scss';
 
 export interface IExpenseClaimDetailProps {
   context: WebPartContext;
@@ -71,37 +72,31 @@ const ExpenseClaimDetail: React.FC<IExpenseClaimDetailProps> = (props) => {
       {claim.Remarks && <Text>Remarks: {claim.Remarks}</Text>}
 
       <TableCard title="Expense Items">
-        <Stack tokens={{ childrenGap: 4 }}>
-          {(claim.Items || []).map((item) => (
-            <div className={styles.itemCard} key={item.ExpenseItemId}>
-              <Text className={styles.itemTitle}>{item.ExpenseCategory?.CategoryName || 'Item'}</Text>
-              <Text>Date: {formatDate(item.ExpenseDate)}</Text>
-              <Text>Amount: {formatCurrency(item.Amount)}</Text>
-              {item.MerchantName && <Text>Merchant: {item.MerchantName}</Text>}
-              {item.Description && <Text>Description: {item.Description}</Text>}
-
-              <Stack styles={{ root: { marginTop: 8 } }}>
-                <ItemReceipts
-                  currentUser={props.currentUser}
-                  claim={claim}
-                  item={item}
-                  receipts={receipts.filter((r) => r.ExpenseItemId === item.ExpenseItemId)}
-                  canEdit={canEdit}
-                  onChanged={loadReceipts}
-                />
-              </Stack>
-            </div>
-          ))}
-        </Stack>
+        <ExpenseItemsView
+          items={claim.Items || []}
+          renderExtra={(item) => (
+            <ItemReceipts
+              currentUser={props.currentUser}
+              claim={claim}
+              item={item}
+              receipts={receipts.filter((r) => r.ExpenseItemId === item.ExpenseItemId)}
+              canEdit={canEdit}
+              onChanged={loadReceipts}
+            />
+          )}
+        />
       </TableCard>
 
       <ClaimComments claim={claim} currentUser={props.currentUser} />
 
-      <Stack horizontal tokens={{ childrenGap: 8 }}>
-        {canEdit && <DefaultButton text="Edit" onClick={props.onEdit} />}
-        {canEdit && <PrimaryButton text="Submit" onClick={submit} disabled={submitting || !(claim.Items && claim.Items.length)} />}
-        <DefaultButton text="Back" onClick={props.onClose} />
-      </Stack>
+      {canEdit && (
+        <Stack horizontal tokens={{ childrenGap: 8 }}>
+          <DefaultButton text="Edit" onClick={props.onEdit} />
+          <PrimaryButton text="Submit" onClick={submit} disabled={submitting || !(claim.Items && claim.Items.length)} />
+        </Stack>
+      )}
+
+      <BackButton onClick={props.onClose} />
     </Stack>
   );
 };

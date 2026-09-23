@@ -25,8 +25,8 @@ import AdminClaimDetail from './AdminClaimDetail';
 const ALL_KEY = 'all';
 
 const statusValues: ExpenseClaimStatus[] = [
-  'Draft', 'Submitted', 'Manager Approved', 'Department Head Review', 'Finance Review',
-  'Finance Head Review', 'Approved', 'Rejected', 'Sent Back', 'Deleted', 'Reimbursed', 'Pending Approval'
+  'Draft', 'Submitted', 'Department Head Review', 'Finance Review',
+  'Approved', 'Rejected', 'Sent Back', 'Deleted', 'Reimbursed'
 ];
 const statusOptions: IDropdownOption[] = [
   { key: ALL_KEY, text: '--All--' },
@@ -45,6 +45,8 @@ const ExpenseClaimsAdmin: React.FC<IExpenseClaimsAdminProps> = (props) => {
   const [employeeId, setEmployeeId] = React.useState<number | undefined>(undefined);
   const [fromDate, setFromDate] = React.useState<string>('');
   const [toDate, setToDate] = React.useState<string>('');
+  const [claimNumberInput, setClaimNumberInput] = React.useState<string>('');
+  const [claimNumber, setClaimNumber] = React.useState<string>('');
   const [viewing, setViewing] = React.useState<IExpenseClaim | undefined>(undefined);
   const [actionError, setActionError] = React.useState<string | undefined>(undefined);
 
@@ -56,12 +58,13 @@ const ExpenseClaimsAdmin: React.FC<IExpenseClaimsAdminProps> = (props) => {
           departmentId,
           employeeId,
           fromDate: fromDate || undefined,
-          toDate: toDate || undefined
+          toDate: toDate || undefined,
+          claimNumber: claimNumber || undefined
         },
         page,
         pageSize
       ),
-    [status, departmentId, employeeId, fromDate, toDate]
+    [status, departmentId, employeeId, fromDate, toDate, claimNumber]
   );
   const pagination = usePagination(fetchPage);
 
@@ -80,6 +83,12 @@ const ExpenseClaimsAdmin: React.FC<IExpenseClaimsAdminProps> = (props) => {
   ];
 
   const resetPage = (): void => pagination.setPage(1);
+
+  // Debounce free-text claim number entry so it doesn't fire a request on every keystroke.
+  React.useEffect(() => {
+    const handle = setTimeout(() => { setClaimNumber(claimNumberInput.trim()); resetPage(); }, 400);
+    return () => clearTimeout(handle);
+  }, [claimNumberInput]);
 
   const openView = (item: IExpenseClaim): void => {
     expenseService.getById(item.ExpenseClaimId)
@@ -126,6 +135,13 @@ const ExpenseClaimsAdmin: React.FC<IExpenseClaimsAdminProps> = (props) => {
       {(pagination.error || actionError) && <ErrorMessage message={pagination.error || actionError || ''} />}
       <Stack horizontal tokens={{ childrenGap: 12 }} verticalAlign="end" wrap>
         <TextField
+          label="Claim #"
+          placeholder="Search claim number"
+          value={claimNumberInput}
+          onChange={(_e, value) => setClaimNumberInput(value || '')}
+          styles={{ root: { width: 160, marginTop: 6 } }}
+        />
+        <TextField
           label="From Date"
           type="date"
           value={fromDate}
@@ -164,7 +180,7 @@ const ExpenseClaimsAdmin: React.FC<IExpenseClaimsAdminProps> = (props) => {
 
       <TableCard>
         {pagination.loading && pagination.pageItems.length === 0 ? <LoadingState /> : pagination.totalCount === 0 ? (
-          <EmptyState message="No expense claims found for the selected filters." />
+          <EmptyState message="No expense claims found." />
         ) : (
           <>
             <DetailsList

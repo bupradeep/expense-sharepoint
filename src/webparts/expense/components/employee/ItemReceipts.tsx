@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { DefaultButton, IconButton } from '@fluentui/react/lib/Button';
+import { ActionButton, IconButton } from '@fluentui/react/lib/Button';
 import { Stack } from '@fluentui/react/lib/Stack';
 import { Text } from '@fluentui/react/lib/Text';
 import { Link } from '@fluentui/react/lib/Link';
@@ -9,6 +9,8 @@ import { IExpenseItem } from '../../../../models/IExpenseItem';
 import { IExpenseReceipt } from '../../../../models/IExpenseReceipt';
 import { IUser } from '../../../../models/IUser';
 import ErrorMessage from '../common/ErrorMessage';
+import itemStyles from '../common/ExpenseItemsView.module.scss';
+import styles from './ExpenseItemEditor.module.scss';
 
 export interface IItemReceiptsProps {
   currentUser: IUser;
@@ -70,39 +72,46 @@ const ItemReceipts: React.FC<IItemReceiptsProps> = (props) => {
 
   return (
     <Stack tokens={{ childrenGap: 4 }}>
-      <Text styles={{ root: { fontWeight: 600 } }}>Receipts</Text>
+      <Text variant="small" className={itemStyles.fieldLabel}>Receipts</Text>
       {error && <ErrorMessage message={error} />}
-      {props.receipts.length === 0 && <Text variant="small">No receipts attached.</Text>}
-      {props.receipts.map((receipt) => (
-        <Stack horizontal verticalAlign="center" tokens={{ childrenGap: 8 }} key={receipt.ReceiptId}>
-          <Link onClick={() => openReceipt(receipt)}>{receipt.FileName}</Link>
-          {props.canEdit && (
-            <IconButton
-              iconProps={{ iconName: 'Delete' }}
-              title="Remove receipt"
-              ariaLabel="Remove receipt"
-              onClick={() => removeReceipt(receipt.ReceiptId)}
+      <Stack horizontal wrap verticalAlign="center" tokens={{ childrenGap: 6 }}>
+        {props.receipts.length === 0 && <Text variant="small">No receipts attached.</Text>}
+        {props.receipts.map((receipt) => (
+          <Stack horizontal verticalAlign="center" className={styles.fileChip} key={receipt.ReceiptId} tokens={{ childrenGap: 4 }}>
+            <Link onClick={() => openReceipt(receipt)}>
+              <Text variant="small">{receipt.FileName}</Text>
+            </Link>
+            {props.canEdit && (
+              <IconButton
+                className={styles.chipRemove}
+                iconProps={{ iconName: 'Cancel' }}
+                title="Remove receipt"
+                ariaLabel="Remove receipt"
+                onClick={() => removeReceipt(receipt.ReceiptId)}
+              />
+            )}
+          </Stack>
+        ))}
+        {props.canEdit && (
+          <>
+            <input
+              ref={inputRef}
+              type="file"
+              multiple
+              style={{ display: 'none' }}
+              onChange={(e) => handleFiles(e.target.files)}
             />
-          )}
-        </Stack>
-      ))}
-      {props.canEdit && (
-        <Stack horizontal verticalAlign="center" tokens={{ childrenGap: 8 }}>
-          <input
-            ref={inputRef}
-            type="file"
-            multiple
-            style={{ display: 'none' }}
-            onChange={(e) => handleFiles(e.target.files)}
-          />
-          <DefaultButton
-            text={uploading ? 'Uploading...' : 'Upload Receipt'}
-            iconProps={{ iconName: 'Attach' }}
-            disabled={uploading}
-            onClick={() => inputRef.current?.click()}
-          />
-        </Stack>
-      )}
+            <ActionButton
+              className={styles.attachButton}
+              iconProps={{ iconName: 'Attach' }}
+              disabled={uploading}
+              onClick={() => inputRef.current?.click()}
+            >
+              {uploading ? 'Uploading...' : 'Upload Receipt'}
+            </ActionButton>
+          </>
+        )}
+      </Stack>
     </Stack>
   );
 };

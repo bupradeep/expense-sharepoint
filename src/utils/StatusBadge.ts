@@ -5,11 +5,8 @@ export function getStatusColor(status: ExpenseClaimStatus | string): string {
     case 'Draft':
       return '#605e5c';
     case 'Submitted':
-    case 'Pending Approval':
-    case 'Manager Approved':
     case 'Department Head Review':
     case 'Finance Review':
-    case 'Finance Head Review':
       return '#0078d4';
     case 'Approved':
       return '#107c10';

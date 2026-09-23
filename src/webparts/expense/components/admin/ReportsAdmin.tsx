@@ -2,7 +2,7 @@ import * as React from 'react';
 import { DetailsList, DetailsListLayoutMode, SelectionMode, IColumn } from '@fluentui/react/lib/DetailsList';
 import { TextField } from '@fluentui/react/lib/TextField';
 import { Dropdown, IDropdownOption } from '@fluentui/react/lib/Dropdown';
-import { PrimaryButton } from '@fluentui/react/lib/Button';
+import { PrimaryButton, DefaultButton } from '@fluentui/react/lib/Button';
 import { Stack } from '@fluentui/react/lib/Stack';
 import { reportService } from '../../../../services/reportService';
 import { departmentService } from '../../../../services/departmentService';
@@ -11,6 +11,8 @@ import { IExpenseReportRow, IExpenseReportFilter } from '../../../../models/IExp
 import { IDepartment } from '../../../../models/IDepartment';
 import { IUser } from '../../../../models/IUser';
 import { formatCurrency, formatDate } from '../../../../utils/Formatters';
+import { downloadCsv } from '../../../../utils/csvExport';
+import { ApiError } from '../../../../models/IApiError';
 import LoadingState from '../common/LoadingState';
 import ErrorMessage from '../common/ErrorMessage';
 import EmptyState from '../common/EmptyState';
@@ -40,6 +42,8 @@ const ReportsAdmin: React.FC = () => {
   const [validationError, setValidationError] = React.useState<string | undefined>(undefined);
   const [hasRun, setHasRun] = React.useState<boolean>(false);
   const [appliedFilter, setAppliedFilter] = React.useState<IExpenseReportFilter | undefined>(undefined);
+  const [exporting, setExporting] = React.useState<boolean>(false);
+  const [exportError, setExportError] = React.useState<string | undefined>(undefined);
 
   const fetchPage = React.useCallback(
     (page: number, pageSize: number) => {
@@ -76,6 +80,35 @@ const ReportsAdmin: React.FC = () => {
     pagination.setPage(1);
   };
 
+  const exportCsv = (): void => {
+    if (!appliedFilter || !pagination.totalCount) {
+      return;
+    }
+    setExportError(undefined);
+    setExporting(true);
+    reportService.getExpenseReportPage(appliedFilter, 1, pagination.totalCount)
+      .then((result) => {
+        setExporting(false);
+        const headers = ['Claim #', 'Date', 'Employee Code', 'Employee', 'Department', 'Project', 'Client', 'Amount', 'Status'];
+        const rows = result.items.map((item) => [
+          item.ClaimNumber,
+          formatDate(item.ClaimDate),
+          item.EmployeeCode,
+          item.EmployeeName,
+          item.DepartmentName,
+          item.ProjectName || '',
+          item.ClientName || '',
+          formatCurrency(item.TotalAmount),
+          item.Status
+        ]);
+        downloadCsv(`expense-report-${fromDate}-to-${toDate}.csv`, headers, rows);
+      })
+      .catch((err: ApiError) => {
+        setExporting(false);
+        setExportError(err.message);
+      });
+  };
+
   const columns: IColumn[] = [
     { key: 'claimNumber', name: 'Claim #', fieldName: 'ClaimNumber', minWidth: 120, isResizable: true },
     {
@@ -87,7 +120,6 @@ const ReportsAdmin: React.FC = () => {
     { key: 'department', name: 'Department', fieldName: 'DepartmentName', minWidth: 120, isResizable: true },
     { key: 'project', name: 'Project', fieldName: 'ProjectName', minWidth: 140, isResizable: true },
     { key: 'client', name: 'Client', fieldName: 'ClientName', minWidth: 120 },
-    { key: 'costCenter', name: 'Cost Center', fieldName: 'CostCenter', minWidth: 110 },
     {
       key: 'amount', name: 'Amount', minWidth: 100,
       onRender: (item: IExpenseReportRow) => formatCurrency(item.TotalAmount)
@@ -97,7 +129,9 @@ const ReportsAdmin: React.FC = () => {
 
   return (
     <Stack tokens={{ childrenGap: 12 }}>
-      {(validationError || pagination.error) && <ErrorMessage message={validationError || pagination.error || ''} />}
+      {(validationError || pagination.error || exportError) && (
+        <ErrorMessage message={validationError || pagination.error || exportError || ''} />
+      )}
       <Stack horizontal tokens={{ childrenGap: 12 }} verticalAlign="end" wrap>
         <TextField
           label="From Date"
@@ -130,6 +164,12 @@ const ReportsAdmin: React.FC = () => {
           styles={{ root: { width: 180 } }}
         />
         <PrimaryButton text="Run Report" onClick={runReport} disabled={pagination.loading || !fromDate || !toDate} />
+        <DefaultButton
+          text={exporting ? 'Exporting...' : 'Export CSV'}
+          iconProps={{ iconName: 'ExcelDocument' }}
+          onClick={exportCsv}
+          disabled={!hasRun || exporting || pagination.loading || pagination.totalCount === 0}
+        />
       </Stack>
 
       {hasRun && (

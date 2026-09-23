@@ -17,16 +17,14 @@ import FormRow from '../common/FormRow';
 import ListToolbar from '../common/ListToolbar';
 import PaginationControls from '../common/PaginationControls';
 import { usePagination } from '../common/usePagination';
-import DepartmentDetail from './DepartmentDetail';
 
 const emptyForm: IDepartmentDto = { departmentName: '', isActive: true };
 
-type View = 'list' | 'form' | 'detail';
+type View = 'list' | 'form';
 
 const DepartmentsAdmin: React.FC = () => {
   const [view, setView] = React.useState<View>('list');
   const [editing, setEditing] = React.useState<IDepartment | undefined>(undefined);
-  const [viewing, setViewing] = React.useState<IDepartment | undefined>(undefined);
   const [form, setForm] = React.useState<IDepartmentDto>(emptyForm);
   const [saving, setSaving] = React.useState<boolean>(false);
   const [formError, setFormError] = React.useState<string | undefined>(undefined);
@@ -51,11 +49,6 @@ const DepartmentsAdmin: React.FC = () => {
     setForm({ departmentName: item.DepartmentName, isActive: item.IsActive });
     setFormError(undefined);
     setView('form');
-  };
-
-  const openView = (item: IDepartment): void => {
-    setViewing(item);
-    setView('detail');
   };
 
   const save = (): void => {
@@ -118,10 +111,6 @@ const DepartmentsAdmin: React.FC = () => {
     );
   }
 
-  if (view === 'detail' && viewing) {
-    return <DepartmentDetail department={viewing} onClose={() => setView('list')} />;
-  }
-
   const columns: IColumn[] = [
     { key: 'name', name: 'Department', fieldName: 'DepartmentName', minWidth: 200, isResizable: true },
     {
@@ -131,7 +120,7 @@ const DepartmentsAdmin: React.FC = () => {
     {
       key: 'actions', name: '', minWidth: 120,
       onRender: (item: IDepartment) => (
-        <RowActions onView={() => openView(item)} onEdit={() => openEdit(item)} onDelete={() => setDeleteTarget(item)} />
+        <RowActions onEdit={() => openEdit(item)} onDelete={() => setDeleteTarget(item)} />
       )
     }
   ];

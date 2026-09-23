@@ -5,6 +5,8 @@ import { Toggle } from '@fluentui/react/lib/Toggle';
 import { Dropdown, IDropdownOption } from '@fluentui/react/lib/Dropdown';
 import { PrimaryButton, DefaultButton } from '@fluentui/react/lib/Button';
 import { Stack } from '@fluentui/react/lib/Stack';
+import { Text } from '@fluentui/react/lib/Text';
+import { MessageBar, MessageBarType } from '@fluentui/react/lib/MessageBar';
 import { approvalRuleService } from '../../../../services/approvalRuleService';
 import { IApprovalRule, IApprovalRuleDto } from '../../../../models/IApprovalRule';
 import { ApiError } from '../../../../models/IApiError';
@@ -103,6 +105,15 @@ const ApprovalRulesAdmin: React.FC = () => {
       <TableCard title={editing ? 'Edit Approval Rule' : 'New Approval Rule'}>
         <Stack tokens={{ childrenGap: 12 }}>
           {formError && <ErrorMessage message={formError} />}
+          <MessageBar messageBarType={MessageBarType.info}>
+            <Text variant="small">
+              Level 1 sets the <b>starting</b> approver for a claim in this amount range -- e.g. a Level 1 rule with
+              role Finance means claims in this range skip Manager and go straight to Finance. Level 2 and Level 3
+              rules only take effect after the stage before them approves, and choose who reviews next (or, if no
+              rule matches, the claim is fully approved at that point). Level 1 defaults to Manager when no rule
+              covers a given amount range.
+            </Text>
+          </MessageBar>
           <FormRow label="Minimum Amount" required>
             <TextField
               type="number"

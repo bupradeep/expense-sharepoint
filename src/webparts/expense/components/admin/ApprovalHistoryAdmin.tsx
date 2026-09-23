@@ -20,7 +20,7 @@ const ALL_KEY = 'all';
 const statusOptions: IDropdownOption[] = [
   { key: ALL_KEY, text: '--All--' },
   ...[
-    'Department Head Review', 'Finance Review', 'Finance Head Review',
+    'Department Head Review', 'Finance Review',
     'Approved', 'Rejected', 'Sent Back'
   ].map((s) => ({ key: s, text: s }))
 ];

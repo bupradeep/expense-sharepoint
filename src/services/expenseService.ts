@@ -15,12 +15,16 @@ export interface IExpenseListFilter {
   fromDate?: string;
   toDate?: string;
   excludeDeleted?: boolean;
+  claimNumber?: string;
 }
 
 function toQueryString(filter: IExpenseListFilter, page?: number, pageSize?: number): string {
   const parts: string[] = [];
   if (filter.employeeId !== undefined) {
     parts.push(`employeeId=${encodeURIComponent(String(filter.employeeId))}`);
+  }
+  if (filter.claimNumber !== undefined) {
+    parts.push(`claimNumber=${encodeURIComponent(filter.claimNumber)}`);
   }
   if (filter.status !== undefined) {
     parts.push(`status=${encodeURIComponent(filter.status)}`);

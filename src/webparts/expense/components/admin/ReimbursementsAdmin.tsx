@@ -21,6 +21,9 @@ import { usePagination } from '../common/usePagination';
 
 export interface IReimbursementsAdminProps {
   currentUser: IUser;
+  // Finance-role users can see what's awaiting payment and the payment history, but marking a
+  // claim as paid stays restricted to whoever owns the reimbursement workflow in Admin.
+  viewOnly?: boolean;
 }
 
 const emptyPaymentForm: IPaymentDto = { processedBy: 0, paymentMethod: 'Bank Transfer' };
@@ -141,10 +144,10 @@ const ReimbursementsAdmin: React.FC<IReimbursementsAdminProps> = (props) => {
       key: 'amount', name: 'Amount', minWidth: 100,
       onRender: (item: IExpenseClaim) => formatCurrency(item.TotalAmount)
     },
-    {
+    ...(props.viewOnly ? [] : [{
       key: 'actions', name: '', minWidth: 140,
       onRender: (item: IExpenseClaim) => <DefaultButton text="Mark as Paid" onClick={() => openPay(item)} />
-    }
+    } as IColumn])
   ];
 
   const historyColumns: IColumn[] = [
