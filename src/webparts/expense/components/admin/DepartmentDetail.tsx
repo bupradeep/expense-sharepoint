@@ -16,7 +16,7 @@ const DepartmentDetail: React.FC<IDepartmentDetailProps> = (props) => (
     <Stack tokens={{ childrenGap: 12 }}>
       <FormRow label="Department Name"><Text>{props.department.DepartmentName}</Text></FormRow>
       <FormRow label="Active"><Text>{props.department.IsActive ? 'Yes' : 'No'}</Text></FormRow>
-      <DefaultButton text="Back" onClick={props.onClose} />
+      <DefaultButton text="Back" onClick={props.onClose} styles={{ root: { alignSelf: 'flex-start' } }} />
     </Stack>
   </TableCard>
 );

@@ -115,12 +115,13 @@ const ExpenseItemEditor = React.forwardRef<IExpenseItemEditorHandle, IExpenseIte
                 />
               </FormRow>
             </div>
-            <div className={styles.fieldNarrow}>
+            <div className={styles.fieldAmount}>
               <FormRow label="Amount" required>
                 <TextField
                   type="number"
                   value={String(item.amount)}
                   onChange={(_e, value) => updateItem(index, { amount: value ? Number(value) : 0 })}
+                  styles={{ field: { textAlign: 'right' } }}
                 />
               </FormRow>
             </div>

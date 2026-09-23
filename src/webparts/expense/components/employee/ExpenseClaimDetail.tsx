@@ -82,7 +82,6 @@ const ExpenseClaimDetail: React.FC<IExpenseClaimDetailProps> = (props) => {
 
               <Stack styles={{ root: { marginTop: 8 } }}>
                 <ItemReceipts
-                  context={props.context}
                   currentUser={props.currentUser}
                   claim={claim}
                   item={item}

@@ -20,8 +20,9 @@ const UserDetail: React.FC<IUserDetailProps> = (props) => (
       <FormRow label="Employee Object Id"><Text>{props.user.EmployeeObjectId}</Text></FormRow>
       <FormRow label="Role"><Text>{props.user.Role}</Text></FormRow>
       <FormRow label="Department"><Text>{props.user.Department?.DepartmentName || '—'}</Text></FormRow>
+      <FormRow label="Manager"><Text>{props.user.Manager?.FullName || '—'}</Text></FormRow>
       <FormRow label="Active"><Text>{props.user.IsActive ? 'Yes' : 'No'}</Text></FormRow>
-      <DefaultButton text="Back" onClick={props.onClose} />
+      <DefaultButton text="Back" onClick={props.onClose} styles={{ root: { alignSelf: 'flex-start' } }} />
     </Stack>
   </TableCard>
 );

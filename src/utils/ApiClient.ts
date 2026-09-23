@@ -37,11 +37,13 @@ function createApiRoot(baseUrl: string): Queryable {
 // `configureApiClient` can change these after the module has already loaded (e.g. once the web part
 // reads its property-pane settings), so every request must read the current values, not fixed ones.
 let apiRoot: Queryable = createApiRoot(DEFAULT_API_BASE_URL);
+let currentBaseUrl: string = DEFAULT_API_BASE_URL;
 let aadContext: WebPartContext | undefined;
 let apiResourceId: string = DEFAULT_API_RESOURCE_ID;
 
 export function configureApiClient(baseUrl: string, context?: WebPartContext, resourceId?: string): void {
-  apiRoot = createApiRoot(baseUrl || DEFAULT_API_BASE_URL);
+  currentBaseUrl = baseUrl || DEFAULT_API_BASE_URL;
+  apiRoot = createApiRoot(currentBaseUrl);
   aadContext = context;
   apiResourceId = resourceId || DEFAULT_API_RESOURCE_ID;
 }
@@ -98,10 +100,62 @@ async function toApiErrorInfo(err: unknown): Promise<IApiErrorInfo> {
   return { status: httpError.status ?? 0, message };
 }
 
+// PnPjs' Queryable always JSON-stringifies its body and forces a "Content-Type: application/json"
+// header (see createApiRoot above), which breaks a multipart file upload (the browser needs to set
+// its own "multipart/form-data; boundary=..." header) and a binary file download (DefaultParse only
+// knows how to parse JSON). Both go through a plain fetch() instead, reusing the same bearer token.
+async function toFetchErrorInfo(response: Response): Promise<IApiErrorInfo> {
+  let message = response.statusText || 'Request failed';
+  try {
+    const backendBody = await response.clone().json();
+    if (typeof backendBody?.message === 'string') {
+      message = backendBody.message;
+    }
+  } catch {
+    // backend didn't return a JSON body -- fall back to statusText above
+  }
+
+  return { status: response.status, message };
+}
+
+async function uploadFormData<T>(path: string, formData: FormData): Promise<T> {
+  const token = await getBearerToken();
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${currentBaseUrl}/${path}`, { method: 'POST', headers, body: formData });
+
+  if (!response.ok) {
+    throw new ApiError(await toFetchErrorInfo(response));
+  }
+
+  return response.json();
+}
+
+async function downloadBlob(path: string): Promise<Blob> {
+  const token = await getBearerToken();
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${currentBaseUrl}/${path}`, { headers });
+
+  if (!response.ok) {
+    throw new ApiError(await toFetchErrorInfo(response));
+  }
+
+  return response.blob();
+}
+
 export const apiClient = {
   get: <T>(path: string): Promise<T> => sendRequest<T>(path, get),
   post: <T>(path: string, payload?: unknown): Promise<T> => sendRequest<T>(path, post, body(payload || {})),
   put: <T>(path: string, payload?: unknown): Promise<T> => sendRequest<T>(path, put, body(payload || {})),
   delete: <T>(path: string, payload?: unknown): Promise<T> =>
-    sendRequest<T>(path, del, payload !== undefined ? body(payload) : undefined)
+    sendRequest<T>(path, del, payload !== undefined ? body(payload) : undefined),
+  upload: <T>(path: string, formData: FormData): Promise<T> => uploadFormData<T>(path, formData),
+  downloadBlob: (path: string): Promise<Blob> => downloadBlob(path)
 };

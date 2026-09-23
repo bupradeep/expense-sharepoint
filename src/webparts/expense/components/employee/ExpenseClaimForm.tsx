@@ -8,7 +8,6 @@ import { departmentService } from '../../../../services/departmentService';
 import { projectService } from '../../../../services/projectService';
 import { expenseService } from '../../../../services/expenseService';
 import { expenseReceiptService } from '../../../../services/expenseReceiptService';
-import { uploadReceiptFile } from '../../../../utils/SharePointFileUpload';
 import { IDepartment } from '../../../../models/IDepartment';
 import { IProject } from '../../../../models/IProject';
 import { IExpenseClaim, IExpenseClaimCreateDto, IExpenseClaimUpdateDto } from '../../../../models/IExpenseClaim';
@@ -90,16 +89,10 @@ const ExpenseClaimForm: React.FC<IExpenseClaimFormProps> = (props) => {
       }
       files.forEach((file) => {
         uploads.push(
-          uploadReceiptFile(props.context, claim.ClaimNumber, file)
-            .then((uploaded) => expenseReceiptService.create({
-              expenseClaimId: claim.ExpenseClaimId,
-              expenseItemId: savedItem.ExpenseItemId,
-              fileName: uploaded.fileName,
-              filePath: uploaded.serverRelativeUrl,
-              fileType: file.type,
-              fileSize: uploaded.size,
-              uploadedBy: currentUser.UserId
-            }))
+          expenseReceiptService.upload(file, {
+            expenseClaimId: claim.ExpenseClaimId,
+            expenseItemId: savedItem.ExpenseItemId
+          })
         );
       });
     });

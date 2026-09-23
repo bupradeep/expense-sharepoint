@@ -62,7 +62,7 @@ const AdminClaimDetail: React.FC<IAdminClaimDetailProps> = (props) => {
 
       <ClaimComments claim={claim} currentUser={props.currentUser} />
 
-      <DefaultButton text="Back" onClick={props.onClose} />
+      <DefaultButton text="Back" onClick={props.onClose} styles={{ root: { alignSelf: 'flex-start' } }} />
     </Stack>
   );
 };

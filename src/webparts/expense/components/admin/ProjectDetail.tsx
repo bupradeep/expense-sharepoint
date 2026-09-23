@@ -19,7 +19,7 @@ const ProjectDetail: React.FC<IProjectDetailProps> = (props) => (
       <FormRow label="Client Name"><Text>{props.project.ClientName || '—'}</Text></FormRow>
       <FormRow label="Cost Center"><Text>{props.project.CostCenter || '—'}</Text></FormRow>
       <FormRow label="Active"><Text>{props.project.IsActive ? 'Yes' : 'No'}</Text></FormRow>
-      <DefaultButton text="Back" onClick={props.onClose} />
+      <DefaultButton text="Back" onClick={props.onClose} styles={{ root: { alignSelf: 'flex-start' } }} />
     </Stack>
   </TableCard>
 );

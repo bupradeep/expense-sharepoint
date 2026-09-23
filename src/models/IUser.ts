@@ -1,6 +1,11 @@
 import { UserRole } from './Roles';
 import { IDepartment } from './IDepartment';
 
+export interface IUserSummary {
+  UserId: number;
+  FullName: string;
+}
+
 export interface IUser {
   UserId: number;
   FullName: string;
@@ -10,6 +15,8 @@ export interface IUser {
   Role: UserRole;
   DepartmentId?: number;
   Department?: IDepartment;
+  ManagerId?: number;
+  Manager?: IUserSummary;
   IsActive: boolean;
 }
 
@@ -20,5 +27,6 @@ export interface IUserDto {
   employeeObjectId: string;
   role?: UserRole;
   departmentId?: number;
+  managerId?: number;
   isActive?: boolean;
 }

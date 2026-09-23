@@ -41,7 +41,7 @@
     // once under SharePoint Admin Center > Advanced > API access, or getToken() calls will fail.
     "webApiPermissionRequests": [
       {
-        "resource": "REPLACE_WITH_BACKEND_APP_REGISTRATION_NAME",
+        "resource": "expense",
         "scope": "user_impersonation"
       }
     ]

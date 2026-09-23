@@ -10,13 +10,7 @@ export interface IExpenseReceipt {
   UploadedAt?: string;
 }
 
-export interface IExpenseReceiptDto {
+export interface IExpenseReceiptUploadMeta {
   expenseClaimId: number;
   expenseItemId?: number;
-  fileName: string;
-  filePath: string;
-  fileType?: string;
-  fileSize?: number;
-  uploadedBy?: number;
-  createdBy?: number;
 }

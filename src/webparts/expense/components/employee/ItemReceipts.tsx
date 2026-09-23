@@ -3,9 +3,7 @@ import { DefaultButton, IconButton } from '@fluentui/react/lib/Button';
 import { Stack } from '@fluentui/react/lib/Stack';
 import { Text } from '@fluentui/react/lib/Text';
 import { Link } from '@fluentui/react/lib/Link';
-import { WebPartContext } from '@microsoft/sp-webpart-base';
 import { expenseReceiptService } from '../../../../services/expenseReceiptService';
-import { uploadReceiptFile } from '../../../../utils/SharePointFileUpload';
 import { IExpenseClaim } from '../../../../models/IExpenseClaim';
 import { IExpenseItem } from '../../../../models/IExpenseItem';
 import { IExpenseReceipt } from '../../../../models/IExpenseReceipt';
@@ -13,7 +11,6 @@ import { IUser } from '../../../../models/IUser';
 import ErrorMessage from '../common/ErrorMessage';
 
 export interface IItemReceiptsProps {
-  context: WebPartContext;
   currentUser: IUser;
   claim: IExpenseClaim;
   item: IExpenseItem;
@@ -39,16 +36,7 @@ const ItemReceipts: React.FC<IItemReceiptsProps> = (props) => {
     setError(undefined);
 
     Promise.all(files.map((file) =>
-      uploadReceiptFile(props.context, props.claim.ClaimNumber, file)
-        .then((uploaded) => expenseReceiptService.create({
-          expenseClaimId: props.claim.ExpenseClaimId,
-          expenseItemId,
-          fileName: uploaded.fileName,
-          filePath: uploaded.serverRelativeUrl,
-          fileType: file.type,
-          fileSize: uploaded.size,
-          uploadedBy: props.currentUser.UserId
-        }))
+      expenseReceiptService.upload(file, { expenseClaimId: props.claim.ExpenseClaimId, expenseItemId })
     ))
       .then(() => {
         setUploading(false);
@@ -69,6 +57,17 @@ const ItemReceipts: React.FC<IItemReceiptsProps> = (props) => {
       .catch((err: Error) => setError(err.message));
   };
 
+  const openReceipt = (receipt: IExpenseReceipt): void => {
+    expenseReceiptService.download(receipt.ReceiptId)
+      .then((blob) => {
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        // Give the new tab a moment to actually load the blob before revoking its URL.
+        setTimeout(() => URL.revokeObjectURL(url), 30000);
+      })
+      .catch((err: Error) => setError(err.message));
+  };
+
   return (
     <Stack tokens={{ childrenGap: 4 }}>
       <Text styles={{ root: { fontWeight: 600 } }}>Receipts</Text>
@@ -76,7 +75,7 @@ const ItemReceipts: React.FC<IItemReceiptsProps> = (props) => {
       {props.receipts.length === 0 && <Text variant="small">No receipts attached.</Text>}
       {props.receipts.map((receipt) => (
         <Stack horizontal verticalAlign="center" tokens={{ childrenGap: 8 }} key={receipt.ReceiptId}>
-          <Link href={receipt.FilePath} target="_blank" rel="noreferrer">{receipt.FileName}</Link>
+          <Link onClick={() => openReceipt(receipt)}>{receipt.FileName}</Link>
           {props.canEdit && (
             <IconButton
               iconProps={{ iconName: 'Delete' }}

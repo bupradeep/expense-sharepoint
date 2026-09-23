@@ -38,6 +38,7 @@ type View = 'list' | 'form' | 'detail';
 
 const UsersAdmin: React.FC = () => {
   const [departments, setDepartments] = React.useState<IDepartment[]>([]);
+  const [allUsers, setAllUsers] = React.useState<IUser[]>([]);
   const [view, setView] = React.useState<View>('list');
   const [editing, setEditing] = React.useState<IUser | undefined>(undefined);
   const [viewing, setViewing] = React.useState<IUser | undefined>(undefined);
@@ -53,11 +54,21 @@ const UsersAdmin: React.FC = () => {
   );
   const pagination = usePagination(fetchPage);
 
-  React.useEffect(() => {
-    departmentService.getAll().then(setDepartments).catch(() => { /* department dropdown is best-effort */ });
+  const loadManagerOptions = React.useCallback((): void => {
+    userService.getAll().then(setAllUsers).catch(() => { /* manager dropdown is best-effort */ });
   }, []);
 
+  React.useEffect(() => {
+    departmentService.getAll().then(setDepartments).catch(() => { /* department dropdown is best-effort */ });
+    loadManagerOptions();
+  }, [loadManagerOptions]);
+
   const departmentOptions: IDropdownOption[] = departments.map((d) => ({ key: d.DepartmentId, text: d.DepartmentName }));
+
+  // A user can't be their own manager, so the dropdown excludes whoever is currently being edited.
+  const managerOptions: IDropdownOption[] = allUsers
+    .filter((u) => !editing || u.UserId !== editing.UserId)
+    .map((u) => ({ key: u.UserId, text: u.FullName }));
 
   const openCreate = (): void => {
     setEditing(undefined);
@@ -75,6 +86,7 @@ const UsersAdmin: React.FC = () => {
       employeeObjectId: item.EmployeeObjectId,
       role: item.Role,
       departmentId: item.DepartmentId,
+      managerId: item.ManagerId,
       isActive: item.IsActive
     });
     setFormError(undefined);
@@ -98,6 +110,7 @@ const UsersAdmin: React.FC = () => {
         setSaving(false);
         setView('list');
         pagination.reload();
+        loadManagerOptions();
       })
       .catch((err: ApiError) => {
         setSaving(false);
@@ -163,6 +176,14 @@ const UsersAdmin: React.FC = () => {
               onChange={(_e, option) => setForm({ ...form, departmentId: option?.key as number })}
             />
           </FormRow>
+          <FormRow label="Manager">
+            <Dropdown
+              selectedKey={form.managerId}
+              options={managerOptions}
+              placeholder="No manager mapped"
+              onChange={(_e, option) => setForm({ ...form, managerId: option?.key as number })}
+            />
+          </FormRow>
           <FormRow label="Active">
             <Toggle
               checked={form.isActive}
@@ -190,6 +211,10 @@ const UsersAdmin: React.FC = () => {
     { key: 'name', name: 'Full Name', fieldName: 'FullName', minWidth: 160, isResizable: true },
     { key: 'email', name: 'Email', fieldName: 'Email', minWidth: 200, isResizable: true },
     { key: 'role', name: 'Role', fieldName: 'Role', minWidth: 120, isResizable: true },
+    {
+      key: 'manager', name: 'Manager', minWidth: 140, isResizable: true,
+      onRender: (item: IUser) => item.Manager?.FullName || '—'
+    },
     {
       key: 'actions', name: '', minWidth: 120,
       onRender: (item: IUser) => (
