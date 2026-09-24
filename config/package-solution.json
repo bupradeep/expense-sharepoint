@@ -42,7 +42,7 @@
     "webApiPermissionRequests": [
       {
         "resource": "expense",
-        "scope": "user_impersonation"
+        "scope": "access_as_user"
       }
     ]
   },

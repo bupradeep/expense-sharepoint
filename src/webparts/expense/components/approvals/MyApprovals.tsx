@@ -85,7 +85,7 @@ const MyApprovals: React.FC<IMyApprovalsProps> = (props) => {
       {(pagination.error || actionError) && <ErrorMessage message={pagination.error || actionError || ''} />}
       <TableCard>
         {pagination.loading && pagination.pageItems.length === 0 ? <LoadingState /> : pagination.totalCount === 0 ? (
-          <EmptyState message="No claims found." />
+          <EmptyState message="No claims found" />
         ) : (
           <>
             <DetailsList

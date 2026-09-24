@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { DetailsList, DetailsListLayoutMode, SelectionMode, IColumn } from '@fluentui/react/lib/DetailsList';
 import { IconButton } from '@fluentui/react/lib/Button';
-import { Toggle } from '@fluentui/react/lib/Toggle';
 import { Stack } from '@fluentui/react/lib/Stack';
 import { Text } from '@fluentui/react/lib/Text';
 import { WebPartContext } from '@microsoft/sp-webpart-base';
@@ -16,6 +15,7 @@ import ErrorMessage from '../common/ErrorMessage';
 import EmptyState from '../common/EmptyState';
 import ConfirmDialog from '../common/ConfirmDialog';
 import TableCard from '../common/TableCard';
+import ActiveToggle from '../common/ActiveToggle';
 import ListToolbar from '../common/ListToolbar';
 import PaginationControls from '../common/PaginationControls';
 import { usePagination } from '../common/usePagination';
@@ -153,7 +153,7 @@ const MyExpenses: React.FC<IMyExpensesProps> = (props) => {
         buttonText="New Claim"
         onButtonClick={() => setView('create')}
         endContent={(
-          <Toggle
+          <ActiveToggle
             inlineLabel
             label="Show deleted"
             checked={showDeleted}

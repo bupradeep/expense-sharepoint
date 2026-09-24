@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { DetailsList, DetailsListLayoutMode, SelectionMode, IColumn } from '@fluentui/react/lib/DetailsList';
 import { TextField } from '@fluentui/react/lib/TextField';
-import { Toggle } from '@fluentui/react/lib/Toggle';
 import { Dropdown, IDropdownOption } from '@fluentui/react/lib/Dropdown';
 import { PrimaryButton, DefaultButton } from '@fluentui/react/lib/Button';
 import { Stack } from '@fluentui/react/lib/Stack';
@@ -18,6 +17,7 @@ import ConfirmDialog from '../common/ConfirmDialog';
 import TableCard from '../common/TableCard';
 import RowActions from '../common/RowActions';
 import FormRow from '../common/FormRow';
+import ActiveToggle from '../common/ActiveToggle';
 import ListToolbar from '../common/ListToolbar';
 import PaginationControls from '../common/PaginationControls';
 import { usePagination } from '../common/usePagination';
@@ -185,7 +185,7 @@ const UsersAdmin: React.FC = () => {
             />
           </FormRow>
           <FormRow label="Active">
-            <Toggle
+            <ActiveToggle
               checked={form.isActive}
               onChange={(_e, checked) => setForm({ ...form, isActive: !!checked })}
             />

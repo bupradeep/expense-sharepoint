@@ -33,15 +33,15 @@ const PRIMARY_TABS: Array<{ key: AdminTabKey; text: string }> = [
   { key: 'reimbursement', text: 'Reimbursement' },
   { key: 'reports', text: 'Reports' },
   { key: 'approvalRules', text: 'Approval Rules' },
-  { key: 'approvalHistory', text: 'Approval History' }
+  { key: 'approvalHistory', text: 'Approval History' },
+  { key: 'auditLog', text: 'Audit Log' }
 ];
 
 const OVERFLOW_TABS: Array<{ key: AdminTabKey; text: string }> = [
+  { key: 'users', text: 'Users' },
   { key: 'departments', text: 'Departments' },
   { key: 'projects', text: 'Projects' },
-  { key: 'users', text: 'Users' },
-  { key: 'categories', text: 'Expense Categories' },
-  { key: 'auditLog', text: 'Audit Log' }
+  { key: 'categories', text: 'Expense Categories' }
 ];
 
 const AdminConsole: React.FC<IAdminConsoleProps> = (props) => {
@@ -84,7 +84,7 @@ const AdminConsole: React.FC<IAdminConsoleProps> = (props) => {
           />
         ))}
         <CommandBarButton
-          text="More"
+          text="Master Data Management"
           menuIconProps={{ iconName: 'ChevronDown' }}
           className={isOverflowSelected ? `${styles.tabButton} ${styles.tabButtonActive}` : styles.tabButton}
           menuProps={{ items: overflowMenuItems }}
