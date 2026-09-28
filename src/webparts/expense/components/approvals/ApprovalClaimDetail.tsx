@@ -4,7 +4,9 @@ import { PrimaryButton, DefaultButton } from '@fluentui/react/lib/Button';
 import { Stack } from '@fluentui/react/lib/Stack';
 import { Text } from '@fluentui/react/lib/Text';
 import { approvalService } from '../../../../services/approvalService';
+import { expenseReceiptService } from '../../../../services/expenseReceiptService';
 import { IExpenseClaim } from '../../../../models/IExpenseClaim';
+import { IExpenseReceipt } from '../../../../models/IExpenseReceipt';
 import { IPendingApproval } from '../../../../models/IApproval';
 import { IUser } from '../../../../models/IUser';
 import { ApiError } from '../../../../models/IApiError';
@@ -16,6 +18,7 @@ import FormRow from '../common/FormRow';
 import ClaimComments from '../common/ClaimComments';
 import BackButton from '../common/BackButton';
 import ExpenseItemsView from '../common/ExpenseItemsView';
+import ItemReceipts from '../employee/ItemReceipts';
 
 export interface IApprovalClaimDetailProps {
   currentUser: IUser;
@@ -45,6 +48,13 @@ const ApprovalClaimDetail: React.FC<IApprovalClaimDetailProps> = (props) => {
   const [comments, setComments] = React.useState<string>('');
   const [saving, setSaving] = React.useState<boolean>(false);
   const [error, setError] = React.useState<string | undefined>(undefined);
+  const [receipts, setReceipts] = React.useState<IExpenseReceipt[]>([]);
+
+  React.useEffect(() => {
+    expenseReceiptService.listByClaim(claim.ExpenseClaimId)
+      .then(setReceipts)
+      .catch((err: ApiError) => setError(err.message));
+  }, [claim.ExpenseClaimId]);
 
   const commentsRequired = action === 'reject' || action === 'sendBack';
 
@@ -121,7 +131,19 @@ const ApprovalClaimDetail: React.FC<IApprovalClaimDetailProps> = (props) => {
       {claim.SubmittedAt && <Text>Submitted: {formatDate(claim.SubmittedAt)}</Text>}
 
       <TableCard title="Expense Items">
-        <ExpenseItemsView items={claim.Items || []} />
+        <ExpenseItemsView
+          items={claim.Items || []}
+          renderExtra={(item) => (
+            <ItemReceipts
+              currentUser={props.currentUser}
+              claim={claim}
+              item={item}
+              receipts={receipts.filter((r) => r.ExpenseItemId === item.ExpenseItemId)}
+              canEdit={false}
+              onChanged={() => { /* read-only here -- approvers view receipts, editing stays with the claim owner */ }}
+            />
+          )}
+        />
       </TableCard>
 
       <ClaimComments claim={claim} currentUser={props.currentUser} />
